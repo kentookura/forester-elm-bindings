@@ -1,7 +1,7 @@
 module Query exposing (Dbix, Expr, dbix, expr)
 
 import Base
-import Json.Decode exposing (Decoder, andThen, fail, field, int, list, map, map2, map4, oneOf, string, succeed)
+import Json.Decode exposing (Decoder, andThen, fail, field, int, lazy, list, map, map2, map4, oneOf, string, succeed)
 
 
 type alias Rel =
@@ -108,17 +108,17 @@ expr var =
                 (field "Rel" rel)
                 (field "Addr_expr" (addr_expr var))
             )
-        , field "Isect" (list (expr var) |> map Isect)
-        , field "Union" (list (expr var) |> map Union)
-        , field "Complement" (expr var |> map Complement)
+        , field "Isect" (list (lazy (\_ -> expr var)) |> map Isect)
+        , field "Union" (list (lazy (\_ -> expr var)) |> map Union)
+        , field "Complement" (lazy (\_ -> expr var) |> map Complement)
         , field "Union_fam"
             (map2 Union_fam
-                (field "Expr" (expr var))
-                (field "Binder" (binder (expr var)))
+                (field "Expr" (lazy (\_ -> expr var)))
+                (field "Binder" (binder (lazy (\_ -> expr var))))
             )
         , field "Isect_fam"
             (map2 Isect_fam
-                (field "Expr" (expr var))
-                (field "Binder" (binder (expr var)))
+                (field "Expr" (lazy (\_ -> expr var)))
+                (field "Binder" (binder (lazy (\_ -> expr var))))
             )
         ]

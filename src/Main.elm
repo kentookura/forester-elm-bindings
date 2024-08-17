@@ -111,7 +111,7 @@ frontmatter c =
 
 type EntryFlags
     = EntryId String
-    | EntryValue Content
+    | EntryValue (List Content_node)
 
 
 type alias RecordFlags =
@@ -119,7 +119,7 @@ type alias RecordFlags =
 
 
 type alias Record =
-    ( String, Content )
+    ( String, List Content_node )
 
 
 
@@ -178,7 +178,7 @@ build_meta_from_flags idEntry valueEntry =
 
 recordDecoder : Decoder Record
 recordDecoder =
-    list (oneOf [ map EntryId string, map EntryValue content ])
+    list (oneOf [ map EntryId string, map EntryValue (list content_node) ])
         |> andThen buildRecord
 
 
@@ -425,28 +425,28 @@ content_node =
     oneOf
         [ field "Text" string |> map Text
         , field "CDATA" string |> map CDATA
-        , field "Xml_elt" (xml_elt (lazy (\_ -> content))) |> map Xml_elt
-        , field "Transclude" (transclusion (lazy (\_ -> content))) |> map Transclude
+        , field "Xml_elt" (xml_elt content) |> map Xml_elt
+        , field "Transclude" (transclusion content) |> map Transclude
         , field "Results_of_query" (Query.expr int) |> map Results_of_query
-        , field "Section" (section (lazy (\_ -> content))) |> map Section
+        , field "Section" (section content) |> map Section
         , field "Prim"
             -- interesting, it's curried
             (prim
                 |> andThen
                     (\p ->
-                        lazy (\_ -> content)
+                        content
                             |> map (\c -> Prim ( p, c ))
                     )
             )
         , field "KaTeX"
             (map2 KaTeX
                 (field "Math_mode" Base.math_mode)
-                (field "Content" (lazy (\_ -> content)))
+                (field "Content" content)
             )
         , field "TeX_cs" tex_cs |> map TeX_cs
-        , field "Link" (link (lazy (\_ -> content))) |> map Link
+        , field "Link" (link content) |> map Link
         , field "Img" img |> map Img
-        , field "Resource" (lazy (\_ -> resource)) |> map Resource
+        , field "Resource" resource |> map Resource
         ]
 
 
@@ -456,18 +456,18 @@ type Content
 
 content : Decoder Content
 content =
-    list (lazy (\_ -> content_node)) |> map Content
+    field "Content" (list (lazy (\_ -> content_node))) |> map Content
 
 
 type alias Resource_ =
-    { hash : String, content : Content, sources : List Resource_source }
+    { hash : String, content : List Content_node, sources : List Resource_source }
 
 
 resource : Decoder Resource_
 resource =
     map3 Resource_
         (field "hash" string)
-        (field "content" (lazy (\_ -> content)))
+        (field "content" (list (lazy (\_ -> content_node))))
         (field "sources" (list resource_source))
 
 
