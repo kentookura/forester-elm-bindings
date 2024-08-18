@@ -4,7 +4,8 @@ import Base exposing (Addr, addr, xml_qname)
 import Browser
 import Html exposing (Html, div, img)
 import Json.Decode as Decode exposing (Decoder, andThen, bool, decodeString, fail, field, int, lazy, list, map, map2, map3, map6, maybe, oneOf, oneOrMore, string, succeed)
-import Json.Decode.Pipeline exposing (hardcoded)
+import Json.Decode.Pipeline exposing (hardcoded, required)
+import Maybe exposing (withDefault)
 import Maybe.Extra
 import Query
 
@@ -101,85 +102,88 @@ type alias Frontmatter content =
 
 
 
--- Todo: frontmatter
+-- TODO: frontmatter
 
 
 frontmatter : Decoder content -> Decoder (Frontmatter content)
 frontmatter c =
-    oneOf []
-
-
-type EntryFlags
-    = EntryId String
-    | EntryValue (List Content_node)
-
-
-type alias RecordFlags =
-    List EntryFlags
-
-
-type alias Record =
-    ( String, List Content_node )
+    Decode.succeed Frontmatter
+        |> required "addr" addr
+        |> required "title" c
+        |> required "dates" (list date)
+        |> required "attributions" (list attribution)
+        |> required "taxon" string
+        |> required "number" (maybe string)
+        |> required "designated_parent" (maybe addr)
+        |> required "source_path" (maybe string)
+        |> required "tags" (list string)
+        |> required "metas" (metas c)
 
 
 
--- type alias Metas =
---     List MetaItem
+{--
+  (string * content) list gets serialized as a heterogeneous list by repr.
+  The strategy to work around that is to parse the strings into a list of
+  MetaParts and then accumulate
+--}
+
+
+type MetaPart content
+    = MetaId String
+    | MetaValue content
+
+
+part : Decoder content -> Decoder (MetaPart content)
+part c =
+    oneOf
+        [ string |> map MetaId
+        , c |> map MetaValue
+        ]
+
+
+type alias Accumulator content =
+    ( Maybe (MetaPart content), List ( String, content ) )
+
+
+folder : MetaPart content -> Accumulator content -> Accumulator content
+folder parts ( state, acc ) =
+    case state of
+        Nothing ->
+            case parts of
+                MetaId str ->
+                    ( Just (MetaId str), acc )
+
+                _ ->
+                    ( Nothing, [] )
+
+        Just (MetaId str) ->
+            case parts of
+                MetaValue c ->
+                    ( Nothing, ( str, c ) :: acc )
+
+                _ ->
+                    ( Nothing, acc )
+
+        _ ->
+            ( Nothing, acc )
+
+
+createPairs : List (MetaPart content) -> List ( String, content )
+createPairs l =
+    let
+        ( _, acc ) =
+            List.foldr folder ( Nothing, [] ) l
+    in
+    List.reverse acc
+
+
+metas : Decoder content -> Decoder (List ( String, content ))
+metas c =
+    list (part c) |> andThen (\parts -> createPairs parts |> succeed)
 
 
 type alias Section_ content =
     { frontmatter : Frontmatter content, mainmatter : content, flags : Section_flags }
-
-
-buildRecord : List EntryFlags -> Decoder Record
-buildRecord ms =
-    case ms of
-        [] ->
-            Decode.fail "No values were passed"
-
-        [ x ] ->
-            Decode.fail "Only key was passed, but no values"
-
-        x :: y :: xs ->
-            case build_meta_from_flags x y of
-                Nothing ->
-                    fail ""
-
-                Just value ->
-                    succeed value
-
-
-build_meta_from_flags : EntryFlags -> EntryFlags -> Maybe Record
-build_meta_from_flags idEntry valueEntry =
-    let
-        maybeId =
-            case idEntry of
-                EntryId string ->
-                    Just string
-
-                _ ->
-                    Nothing
-
-        maybeEntry =
-            case valueEntry of
-                EntryValue value ->
-                    Just value
-
-                _ ->
-                    Nothing
-    in
-    case ( maybeId, maybeEntry ) of
-        ( Just id, Just entries ) ->
-            Just ( id, entries )
-
-        _ ->
-            Nothing
-
-
-recordDecoder : Decoder Record
-recordDecoder =
-    list (oneOf [ map EntryId string, map EntryValue (list content_node) ])
-        |> andThen buildRecord
 
 
 section : Decoder content -> Decoder (Section_ content)
@@ -472,12 +476,7 @@ resource =
 
 
 type alias Model =
-    List Record
-
-
-decoder : Decoder Model
-decoder =
-    list recordDecoder
+    List ( String, Content )
 
 
 jsonString : String
@@ -487,7 +486,7 @@ jsonString =
 
 init : Model
 init =
-    case decodeString decoder jsonString of
+    case decodeString (metas content) jsonString of
         Ok res ->
             res
 
