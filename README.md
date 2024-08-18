@@ -3,12 +3,12 @@ https://mirage.github.io/repr/repr/Repr/index.html#json-converters
 Repr serializes constructors with multiple arguments into heterogeneous lists,
 for example:
 
-```
+```ocaml
 Rel of mode * polarity * Rel.t * 'var addr_expr
 ```
 
-```
-"Rel": [
+```json
+{ "Rel": [
     "Paths",
     "Outgoing",
     "org.forester.rel.transclusion",
@@ -17,13 +17,14 @@ Rel of mode * polarity * Rel.t * 'var addr_expr
             "User_addr": "asdf"
         }
     }
+}
 ```
 
 How to decode:
 
 Create an auxilliary type with one constructor per argument:
 
-```
+```elm
 type Relpart var
     = M Mode
     | P Polarity
@@ -31,8 +32,8 @@ type Relpart var
     | AE (Addr_expr var)
 ```
 
-Decode into a list of parts:
-```
+Decode into a list of parts and only accept lists that match the constructor:
+```elm
 relpart : Decoder var -> Decoder (Relpart var)
 relpart var =
     oneOf
@@ -42,10 +43,6 @@ relpart var =
         , addr_expr var |> map AE
         ]
 
-```
-
-Only accept lists that match the constructor:
-```
 rel : Decoder var -> Decoder (Expr var)
 rel v =
     list (relpart v)
