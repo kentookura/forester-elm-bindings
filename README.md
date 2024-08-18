@@ -1,3 +1,15 @@
+# Elm Bindings for [Forester](http://www.jonmsterling.com/jms-005P.xml)
+
+## What about using [Hypermedia instead of a JSON API](https://htmx.org/essays/hypermedia-apis-vs-data-apis)?
+
+Forester is already hypermedium. The fact that we are serialising to JSON is an
+implementation detail. I have opted for faithfully representing forester types
+in the elm frontend for maximum expressiveness on the frontend. Instead of
+compiling forester to HTML and using the browser as a "raw" hypermedia client,
+we can effectively use elm to ipmlement a custom hypermedia client model for forester.
+
+## Notes
+
 https://mirage.github.io/repr/repr/Repr/index.html#json-converters
 
 Repr serializes constructors with multiple arguments into heterogeneous lists,
