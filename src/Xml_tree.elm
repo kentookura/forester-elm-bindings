@@ -27,6 +27,8 @@ module Xml_tree exposing
     , content_node
     , content_target
     , createPairs
+    , default_section_flags
+    , empty_frontmatter_overrides
     , folder
     , frontmatter
     , frontmatter_overrides
@@ -82,15 +84,26 @@ type alias Section_flags =
     }
 
 
+default_section_flags : Section_flags
+default_section_flags =
+    { hidden_when_empty = Nothing
+    , included_in_toc = Nothing
+    , header_shown = Nothing
+    , metadata_shown = Just False
+    , numbered = Nothing
+    , expanded = Nothing
+    }
+
+
 section_flags : Decoder Section_flags
 section_flags =
-    map6 Section_flags
-        (field "hidden_when_empty" (maybe bool))
-        (field "included_in_toc" (maybe bool))
-        (field "header_shown" (maybe bool))
-        (field "metadata_shown" (maybe bool))
-        (field "numbered" (maybe bool))
-        (field "expanded" (maybe bool))
+    succeed Section_flags
+        |> optional "hidden_when_empty" (maybe bool) Nothing
+        |> optional "included_in_toc" (maybe bool) Nothing
+        |> optional "header_shown" (maybe bool) Nothing
+        |> optional "metadata_shown" (maybe bool) Nothing
+        |> optional "numbered" (maybe bool) Nothing
+        |> optional "expanded" (maybe bool) Nothing
 
 
 type alias Frontmatter_overrides content =
@@ -99,11 +112,15 @@ type alias Frontmatter_overrides content =
     }
 
 
+empty_frontmatter_overrides =
+    { title = Nothing, taxon = Nothing }
+
+
 frontmatter_overrides : Decoder content -> Decoder (Frontmatter_overrides content)
 frontmatter_overrides c =
-    map2 Frontmatter_overrides
-        (field "title" (maybe c))
-        (field "taxon" (maybe (maybe string)))
+    succeed Frontmatter_overrides
+        |> optional "title" (maybe c) Nothing
+        |> optional "taxon" (maybe (maybe string)) Nothing
 
 
 type alias Xml_attr =
@@ -119,12 +136,12 @@ type alias Xml_elt_ content =
     { name : Base.Xml_qname, attrs : List Xml_attr, content : content }
 
 
-xml_elt : Decoder content -> Decoder (Xml_elt_ content)
-xml_elt c =
-    map3 Xml_elt_
-        (field "name" xml_qname)
-        (field "attrs" (list xml_attr))
-        (field "content" c)
+xml_elt : Decoder (Xml_elt_ Content)
+xml_elt =
+    succeed Xml_elt_
+        |> required "name" xml_qname
+        |> optional "attrs" (list xml_attr) []
+        |> optional "content" content (Content [])
 
 
 type Attribution
@@ -134,7 +151,10 @@ type Attribution
 
 attribution : Decoder Attribution
 attribution =
-    oneOf [ field "Author" (map Author string), field "Contributor" (map Contributor string) ]
+    oneOf
+        [ field "Author" (map Author string)
+        , field "Contributor" (map Contributor string)
+        ]
 
 
 type alias Frontmatter content =
@@ -268,12 +288,13 @@ content_target : Decoder content -> Decoder (Content_target content)
 content_target c =
     oneOf
         [ field "Full"
-            (map2 Full
-                (field "Section_flags" section_flags)
-                (field
+            (succeed
+                Full
+                |> optional "Section_flags" section_flags default_section_flags
+                |> optional
                     "Frontmatter_overrides"
                     (frontmatter_overrides c)
-                )
+                    empty_frontmatter_overrides
             )
         , string
             |> andThen
@@ -483,7 +504,7 @@ content_node =
     oneOf
         [ field "Text" string |> map Text
         , field "CDATA" string |> map CDATA
-        , field "Xml_elt" (xml_elt content) |> map Xml_elt
+        , field "Xml_elt" xml_elt |> map Xml_elt
         , field "Transclude" (transclusion content) |> map Transclude
         , field "Results_of_query" (Query.expr int) |> map Results_of_query
         , field "Section" section |> map Section

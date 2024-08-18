@@ -2,49 +2,142 @@ module XmlTreeSpec exposing (suite)
 
 import Base exposing (Addr(..), addr)
 import Expect
-import Json.Decode exposing (decodeString)
+import Json.Decode exposing (Decoder, decodeString)
 import Test exposing (Test)
-import Xml_tree exposing (Article, Content(..), Frontmatter, article, content, frontmatter)
+import Xml_tree
+    exposing
+        ( Article
+        , Content(..)
+        , Content_node(..)
+        , Content_target(..)
+        , Frontmatter
+        , Modifier(..)
+        , Transclusion
+        , article
+        , content
+        , content_node
+        , content_target
+        , default_section_flags
+        , empty_frontmatter_overrides
+        , frontmatter
+        )
 
 
-frontmatter_str : String
-frontmatter_str =
+type alias Testcase a =
+    ( String, a, Decoder a )
+
+
+run : String -> Testcase a -> Test
+run desc ( str, expected, decoder ) =
+    Test.test desc <|
+        \_ ->
+            Expect.equal
+                (decodeString decoder str)
+                (Ok expected)
+
+
+frontmatterCase : Testcase (Frontmatter Content)
+frontmatterCase =
+    let
+        str =
+            """
+        { 
+            "addr": {
+              "User_addr": "queries"
+            },
+            "source_path": "/home/kento/ocaml-forester/trees/queries.tree"
+        }
+        """
+
+        expected =
+            { addr = User_addr "queries"
+            , attributions = []
+            , dates = []
+            , designated_parent = Nothing
+            , metas = []
+            , number = Nothing
+            , source_path = Just "/home/kento/ocaml-forester/trees/queries.tree"
+            , tags = []
+            , taxon = Nothing
+            , title = Content []
+            }
+    in
+    ( str, expected, frontmatter )
+
+
+textCase : Testcase Content_node
+textCase =
+    let
+        str =
+            """ {"Text": "hello"}
+            """
+
+        expected =
+            Text "hello"
+    in
+    ( str, expected, content_node )
+
+
+xmleltCase : Testcase Content_node
+xmleltCase =
+    let
+        str =
+            """
+      {
+        "Xml_elt": {
+          "name": {
+            "prefix": "mml",
+            "uname": "math",
+            "xmlns": "http://www.w3.org/1998/Math/MathML"
+          },
+          "content": [
+            {
+              "Text": "x"
+            }
+          ]
+        }
+      }
     """
-{ 
-    "addr": {
-      "User_addr": "queries"
-    },
-    "source_path": "/home/kento/ocaml-forester/trees/queries.tree"
-}
-"""
+
+        expected =
+            Xml_elt
+                { name =
+                    { prefix = "mml"
+                    , uname = "math"
+                    , xmlns = Just "http://www.w3.org/1998/Math/MathML"
+                    }
+                , attrs = []
+                , content = Content [ Text "x" ]
+                }
+    in
+    ( str, expected, content_node )
 
 
-expected_frontmatter : Frontmatter Content
-expected_frontmatter =
-    { addr = User_addr "queries"
-    , attributions = []
-    , dates = []
-    , designated_parent = Nothing
-    , metas = []
-    , number = Nothing
-    , source_path = Just "/home/kento/ocaml-forester/trees/queries.tree"
-    , tags = []
-    , taxon = Nothing
-    , title = Content []
-    }
-
-
-str : String
-str =
+targetCase : Testcase (Content_target Content)
+targetCase =
+    let
+        str =
+            """
+        { "Full": [
+                {
+                  "metadata_shown": false
+                },
+                {}
+              ]
+            }
     """
-{
-  "frontmatter": {
-    "addr": {
-      "User_addr": "queries"
-    },
-    "source_path": "/home/kento/ocaml-forester/trees/queries.tree"
-  },
-  "mainmatter": [
+
+        expected =
+            Full default_section_flags empty_frontmatter_overrides
+    in
+    ( str, expected, content_target content )
+
+
+transcludeCase : Testcase Content_node
+transcludeCase =
+    let
+        str =
+            """
     {
       "Transclude": {
         "addr": {
@@ -61,274 +154,40 @@ str =
         "modifier": "Identity"
       }
     }
-  ],
-  "backmatter": [
-    {
-      "Section": {
-        "frontmatter": {
-          "addr": "Anon",
-          "title": [
-            {
-              "Text": "references"
-            }
-          ]
-        },
-        "mainmatter": [
-          {
-            "Results_of_query": {
-              "Isect": [
-                {
-                  "Union_fam": [
-                    {
-                      "Rel": [
-                        "Paths",
-                        "Outgoing",
-                        "org.forester.rel.transclusion",
-                        {
-                          "Addr": {
-                            "User_addr": "queries"
-                          }
-                        }
-                      ]
-                    },
-                    {
-                      "body": {
-                        "Rel": [
-                          "Edges",
-                          "Outgoing",
-                          "org.forester.rel.links",
-                          {
-                            "Var": 0
-                          }
-                        ]
-                      }
-                    }
-                  ]
-                },
-                {
-                  "Rel": [
-                    "Edges",
-                    "Incoming",
-                    "org.forester.rel.taxa",
-                    {
-                      "Addr": {
-                        "User_addr": "reference"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        ],
-        "flags": {
-          "hidden_when_empty": true,
-          "metadata_shown": false
-        }
-      }
-    },
-    {
-      "Section": {
-        "frontmatter": {
-          "addr": "Anon",
-          "title": [
-            {
-              "Text": "context"
-            }
-          ]
-        },
-        "mainmatter": [
-          {
-            "Results_of_query": {
-              "Rel": [
-                "Edges",
-                "Incoming",
-                "org.forester.rel.transclusion",
-                {
-                  "Addr": {
-                    "User_addr": "queries"
-                  }
-                }
-              ]
-            }
-          }
-        ],
-        "flags": {
-          "hidden_when_empty": true,
-          "metadata_shown": false
-        }
-      }
-    },
-    {
-      "Section": {
-        "frontmatter": {
-          "addr": "Anon",
-          "title": [
-            {
-              "Text": "backlinks"
-            }
-          ]
-        },
-        "mainmatter": [
-          {
-            "Results_of_query": {
-              "Rel": [
-                "Edges",
-                "Incoming",
-                "org.forester.rel.links",
-                {
-                  "Addr": {
-                    "User_addr": "queries"
-                  }
-                }
-              ]
-            }
-          }
-        ],
-        "flags": {
-          "hidden_when_empty": true,
-          "metadata_shown": false
-        }
-      }
-    },
-    {
-      "Section": {
-        "frontmatter": {
-          "addr": "Anon",
-          "title": [
-            {
-              "Text": "related"
-            }
-          ]
-        },
-        "mainmatter": [
-          {
-            "Results_of_query": {
-              "Isect": [
-                {
-                  "Rel": [
-                    "Edges",
-                    "Outgoing",
-                    "org.forester.rel.links",
-                    {
-                      "Addr": {
-                        "User_addr": "queries"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "Complement": {
-                    "Rel": [
-                      "Edges",
-                      "Incoming",
-                      "org.forester.rel.taxa",
-                      {
-                        "Addr": {
-                          "User_addr": "reference"
-                        }
-                      }
-                    ]
-                  }
-                }
-              ]
-            }
-          }
-        ],
-        "flags": {
-          "hidden_when_empty": true,
-          "metadata_shown": false
-        }
-      }
-    },
-    {
-      "Section": {
-        "frontmatter": {
-          "addr": "Anon",
-          "title": [
-            {
-              "Text": "contributions"
-            }
-          ]
-        },
-        "mainmatter": [
-          {
-            "Results_of_query": {
-              "Union": [
-                {
-                  "Rel": [
-                    "Edges",
-                    "Incoming",
-                    "org.forester.rel.authors",
-                    {
-                      "Addr": {
-                        "User_addr": "queries"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "Rel": [
-                    "Edges",
-                    "Incoming",
-                    "org.forester.rel.contributors",
-                    {
-                      "Addr": {
-                        "User_addr": "queries"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        ],
-        "flags": {
-          "hidden_when_empty": true,
-          "metadata_shown": false
-        }
-      }
-    }
-  ]
-}
-"""
+    """
 
-
-expected : Article Content
-expected =
-    { frontmatter =
-        { addr = User_addr ""
-        , title = Content []
-        , dates = []
-        , attributions = []
-        , taxon = Nothing
-        , number = Nothing
-        , designated_parent = Nothing
-        , source_path = Nothing
-        , tags = []
-        , metas = []
-        }
-    , mainmatter = Content []
-    , backmatter = Content []
-    }
+        expected =
+            Transclude
+                { addr = Machine_addr 31999
+                , target = Full default_section_flags empty_frontmatter_overrides
+                , modifier = Identity
+                }
+    in
+    ( str, expected, content_node )
 
 
 suite : Test
 suite =
-    Test.describe "Full"
-        [ Test.describe "is able to decode articles"
-            [ Test.test "frontmatter" <|
-                \_ ->
-                    Expect.equal
-                        (decodeString frontmatter frontmatter_str)
-                        (Ok expected_frontmatter)
+    Test.describe "Xml_tree"
+        [ Test.describe "is able to decode content nodes"
+            [ run "text" textCase
 
-            -- , Test.test "example" <|
-            --     \_ ->
-            --         Expect.equal
-            --             (decodeString article str)
-            --             (Ok
-            --                 expected
-            --             )
+            -- , run "CDATA" cdataCase
+            , run "Xml_elt" xmleltCase
+            , run "Transclude" transcludeCase
+
+            -- , run "Results_of_query" resultsCase
+            -- , run "Section" sectionCase
+            -- , run "Prim" primCase
+            -- , run "KaTeX" katexCase
+            -- , run "TeX_cs" texCsCase
+            -- , run "Link" linkCase
+            -- , run "Img" imgCase
+            -- , run "Resource" resourceCase
+            ]
+        , Test.describe "is able to decode articles"
+            [ run "frontmatter" frontmatterCase
+            , run "target" targetCase
+            , run "transclude" transcludeCase
             ]
         ]
