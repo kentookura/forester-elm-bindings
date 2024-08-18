@@ -6,9 +6,11 @@ import Json.Decode exposing (decodeString)
 import Query
     exposing
         ( Addr_expr(..)
+        , Dbix
         , Expr(..)
         , Mode(..)
         , Polarity(..)
+        , dbix
         , expr
         )
 import Test exposing (Test)
@@ -40,30 +42,27 @@ r_str =
 """
 
 
-e : Expr Addr
-e =
-    Isect
-        [ Union_fam
-            (Rel
-                Paths
+u : Expr Dbix
+u =
+    Union_fam
+        (Rel
+            Paths
+            Outgoing
+            "org.forester.rel.transclusion"
+            (Addr (User_addr "asdf"))
+        )
+        { body =
+            Rel
+                Edges
                 Outgoing
-                "org.forester.rel.transclusion"
-                (Addr (User_addr "asdf"))
-            )
-            { body =
-                Rel
-                    Edges
-                    Outgoing
-                    "org.forester.rel.links"
-                    (Var (Machine_addr 0))
-            }
-        ]
+                "org.forester.rel.links"
+                (Var 0)
+        }
 
 
-e_str : String
-e_str =
+u_str : String
+u_str =
     """
-    {"Isect" : [
         {
             "Union_fam": [
                 {
@@ -91,21 +90,61 @@ e_str =
                     }
                 }
             ]
-        },
-        {
-            "Rel": [
-                "Edges",
-                "Incoming",
-                "org.forester.rel.taxa",
-                {
-                    "Addr": {
-                        "User_addr": "reference"
-                    }
-                }
-            ]
         }
-    ]
-    }
+"""
+
+
+e : Expr Addr
+e =
+    Isect
+        [ Rel
+            Edges
+            Outgoing
+            "org.forester.rel.links"
+            (Addr (User_addr "queries"))
+        , Complement
+            (Rel
+                Edges
+                Incoming
+                "org.forester.rel.taxa"
+                (Addr (User_addr "reference"))
+            )
+        ]
+
+
+e_str : String
+e_str =
+    """
+{
+              "Isect": [
+                {
+                  "Rel": [
+                    "Edges",
+                    "Outgoing",
+                    "org.forester.rel.links",
+                    {
+                      "Addr": {
+                        "User_addr": "queries"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "Complement": {
+                    "Rel": [
+                      "Edges",
+                      "Incoming",
+                      "org.forester.rel.taxa",
+                      {
+                        "Addr": {
+                          "User_addr": "reference"
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
 """
 
 
@@ -113,9 +152,11 @@ suite : Test
 suite =
     Test.describe "Query"
         [ Test.describe "is able to decode queries"
-            [ Test.test "user addrs" <|
-                \_ -> Expect.equal (decodeString (expr addr) r_str) (Ok r)
-
-            -- Test.test "user addrs" <| \_ -> Expect.equal (decodeString (expr addr) e_str) (Ok e)
+            [ -- Test.test "union" <|
+              -- \_ -> Expect.equal (decodeString (expr dbix) u_str) (Ok u)
+              -- , Test.test "rel" <|
+              --     \_ -> Expect.equal (decodeString (expr addr) r_str) (Ok r)
+              Test.test "user addrs" <|
+                \_ -> Expect.equal (decodeString (expr addr) e_str) (Ok e)
             ]
         ]

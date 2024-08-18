@@ -509,12 +509,12 @@ content =
 
 
 type alias Resource_ =
-    { hash : String, content : List Content_node, sources : List Resource_source }
+    { hash : String, content : Content, sources : List Resource_source }
 
 
 resource : Decoder Resource_
 resource =
     map3 Resource_
         (field "hash" string)
-        (field "content" (list (lazy (\_ -> content_node))))
+        (field "content" content)
         (field "sources" (list resource_source))

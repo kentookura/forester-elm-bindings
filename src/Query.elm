@@ -112,6 +112,33 @@ type Expr var
     | Isect_fam (Expr var) (Binder (Expr var))
 
 
+type FamPart var
+    = E (Expr var)
+    | B (Binder (Expr var))
+
+
+fampart : Decoder var -> Decoder (FamPart var)
+fampart v =
+    oneOf
+        [ expr v |> map E
+        , binder (expr v) |> map B
+        ]
+
+
+fam : (Expr var -> Binder (Expr var) -> a) -> Decoder var -> Decoder a
+fam famkind v =
+    list (fampart v)
+        |> andThen
+            (\parts ->
+                case parts of
+                    [ E e, B b ] ->
+                        succeed (famkind e b)
+
+                    _ ->
+                        fail ""
+            )
+
+
 type Relpart var
     = M Mode
     | P Polarity
@@ -150,14 +177,6 @@ expr var =
         , field "Isect" (list (lazy (\_ -> expr var)) |> map Isect)
         , field "Union" (list (lazy (\_ -> expr var)) |> map Union)
         , field "Complement" (lazy (\_ -> expr var) |> map Complement)
-        , field "Union_fam"
-            (map2 Union_fam
-                (field "Expr" (lazy (\_ -> expr var)))
-                (field "Binder" (binder (lazy (\_ -> expr var))))
-            )
-        , field "Isect_fam"
-            (map2 Isect_fam
-                (field "Expr" (lazy (\_ -> expr var)))
-                (field "Binder" (binder (lazy (\_ -> expr var))))
-            )
+        , field "Union_fam" (lazy (\_ -> fam Union_fam var))
+        , field "Isect_fam" (lazy (\_ -> fam Isect_fam var))
         ]
