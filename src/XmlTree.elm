@@ -1,4 +1,4 @@
-module Xml_tree exposing
+module XmlTree exposing
     ( Accumulator
     , Article
     , Attribution(..)

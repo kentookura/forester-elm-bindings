@@ -4,7 +4,7 @@ import Base exposing (Addr(..), Math_mode(..), addr)
 import Expect
 import Json.Decode exposing (Decoder, decodeString)
 import Test exposing (Test)
-import Xml_tree
+import XmlTree
     exposing
         ( Article
         , Content(..)
@@ -12,6 +12,7 @@ import Xml_tree
         , Content_target(..)
         , Frontmatter
         , Modifier(..)
+        , TeX_cs(..)
         , Transclusion
         , article
         , content
@@ -136,6 +137,24 @@ katexCase =
     ( str, expected, content_node )
 
 
+texCsCase : Testcase Content_node
+texCsCase =
+    let
+        str =
+            """
+  {
+    "TeX_cs": {
+      "Word": "img"
+    }
+  }
+"""
+
+        expected =
+            TeX_cs (Word "img")
+    in
+    ( str, expected, content_node )
+
+
 targetCase : Testcase (Content_target Content)
 targetCase =
     let
@@ -194,16 +213,15 @@ suite =
     Test.describe "Xml_tree"
         [ Test.describe "is able to decode content nodes"
             [ run "text" textCase
-
-            -- , run "CDATA" cdataCase
             , run "Xml_elt" xmleltCase
             , run "Transclude" transcludeCase
             , run "KaTeX" katexCase
+            , run "TeX_cs" texCsCase
 
+            -- , run "CDATA" cdataCase
             -- , run "Results_of_query" resultsCase
             -- , run "Section" sectionCase
             -- , run "Prim" primCase
-            -- , run "TeX_cs" texCsCase
             -- , run "Link" linkCase
             -- , run "Img" imgCase
             -- , run "Resource" resourceCase
