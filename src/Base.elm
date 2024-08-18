@@ -1,6 +1,26 @@
-module Base exposing (Addr(..), Math_mode(..), Xml_qname, addr, math_mode, xml_qname)
+module Base exposing
+    ( Addr(..)
+    , Math_mode(..)
+    , Xml_qname
+    , addr
+    , math_mode
+    , xml_qname
+    )
 
-import Json.Decode exposing (Decoder, andThen, fail, field, int, map, map3, maybe, oneOf, string, succeed)
+import Json.Decode
+    exposing
+        ( Decoder
+        , andThen
+        , fail
+        , field
+        , int
+        , map
+        , map3
+        , maybe
+        , oneOf
+        , string
+        , succeed
+        )
 
 
 type Addr

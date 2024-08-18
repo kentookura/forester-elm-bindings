@@ -1,16 +1,34 @@
-module Query exposing (Dbix, Expr, dbix, expr)
+module Query exposing
+    ( Addr_expr(..)
+    , Dbix
+    , Expr(..)
+    , Mode(..)
+    , Polarity(..)
+    , dbix
+    , expr
+    )
 
-import Base
-import Json.Decode exposing (Decoder, andThen, fail, field, int, lazy, list, map, map2, map4, oneOf, string, succeed)
+import Base exposing (addr)
+import Json.Decode
+    exposing
+        ( Decoder
+        , andThen
+        , fail
+        , field
+        , int
+        , lazy
+        , list
+        , map
+        , map2
+        , map4
+        , oneOf
+        , string
+        , succeed
+        )
 
 
 type alias Rel =
     String
-
-
-rel : Decoder Rel
-rel =
-    string
 
 
 type Mode
@@ -94,20 +112,41 @@ type Expr var
     | Isect_fam (Expr var) (Binder (Expr var))
 
 
+type Relpart var
+    = M Mode
+    | P Polarity
+    | R Rel
+    | AE (Addr_expr var)
 
--- TODO: Lazify
+
+relpart : Decoder var -> Decoder (Relpart var)
+relpart var =
+    oneOf
+        [ mode |> map M
+        , polarity |> map P
+        , string |> map R
+        , addr_expr var |> map AE
+        ]
+
+
+rel : Decoder var -> Decoder (Expr var)
+rel v =
+    list (relpart v)
+        |> andThen
+            (\parts ->
+                case parts of
+                    [ M m, P pol, R r, AE e ] ->
+                        succeed (Rel m pol r e)
+
+                    _ ->
+                        fail "Failed to decode Rel"
+            )
 
 
 expr : Decoder var -> Decoder (Expr var)
 expr var =
     oneOf
-        [ field "Rel"
-            (map4 Rel
-                (field "Mode" mode)
-                (field "Polarity" polarity)
-                (field "Rel" rel)
-                (field "Addr_expr" (addr_expr var))
-            )
+        [ field "Rel" (rel var)
         , field "Isect" (list (lazy (\_ -> expr var)) |> map Isect)
         , field "Union" (list (lazy (\_ -> expr var)) |> map Union)
         , field "Complement" (lazy (\_ -> expr var) |> map Complement)
