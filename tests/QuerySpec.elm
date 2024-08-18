@@ -152,11 +152,11 @@ suite : Test
 suite =
     Test.describe "Query"
         [ Test.describe "is able to decode queries"
-            [ -- Test.test "union" <|
-              -- \_ -> Expect.equal (decodeString (expr dbix) u_str) (Ok u)
-              -- , Test.test "rel" <|
-              --     \_ -> Expect.equal (decodeString (expr addr) r_str) (Ok r)
-              Test.test "user addrs" <|
+            [ Test.test "union" <|
+                \_ -> Expect.equal (decodeString (expr dbix) u_str) (Ok u)
+            , Test.test "rel" <|
+                \_ -> Expect.equal (decodeString (expr addr) r_str) (Ok r)
+            , Test.test "user addrs" <|
                 \_ -> Expect.equal (decodeString (expr addr) e_str) (Ok e)
             ]
         ]

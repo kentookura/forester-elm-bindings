@@ -21,6 +21,7 @@ module Xml_tree exposing
     , Transclusion
     , Xml_attr
     , Xml_elt_
+    , article
     , attribution
     , content
     , content_node
@@ -66,7 +67,7 @@ import Json.Decode as Decode
         , string
         , succeed
         )
-import Json.Decode.Pipeline exposing (required)
+import Json.Decode.Pipeline exposing (optional, required)
 import Prelude exposing (Date, date)
 import Query
 
@@ -141,7 +142,7 @@ type alias Frontmatter content =
     , title : content
     , dates : List Date
     , attributions : List Attribution
-    , taxon : String
+    , taxon : Maybe String
     , number : Maybe String
     , designated_parent : Maybe Addr
     , source_path : Maybe String
@@ -150,19 +151,19 @@ type alias Frontmatter content =
     }
 
 
-frontmatter : Decoder content -> Decoder (Frontmatter content)
-frontmatter c =
+frontmatter : Decoder (Frontmatter Content)
+frontmatter =
     Decode.succeed Frontmatter
         |> required "addr" addr
-        |> required "title" c
-        |> required "dates" (list date)
-        |> required "attributions" (list attribution)
-        |> required "taxon" string
-        |> required "number" (maybe string)
-        |> required "designated_parent" (maybe addr)
-        |> required "source_path" (maybe string)
-        |> required "tags" (list string)
-        |> required "metas" (metas c)
+        |> optional "title" content (Content [])
+        |> optional "dates" (list date) []
+        |> optional "attributions" (list attribution) []
+        |> optional "taxon" (maybe string) Nothing
+        |> optional "number" (maybe string) Nothing
+        |> optional "designated_parent" (maybe addr) Nothing
+        |> optional "source_path" (maybe string) Nothing
+        |> optional "tags" (list string) []
+        |> optional "metas" (metas content) []
 
 
 
@@ -231,12 +232,12 @@ type alias Section_ content =
     { frontmatter : Frontmatter content, mainmatter : content, flags : Section_flags }
 
 
-section : Decoder content -> Decoder (Section_ content)
-section c =
+section : Decoder (Section_ Content)
+section =
     map3
         Section_
-        (field "frontmatter" (frontmatter c))
-        (field "mainmatter" c)
+        (field "frontmatter" frontmatter)
+        (field "mainmatter" content)
         (field "flags" section_flags)
 
 
@@ -245,6 +246,14 @@ type alias Article content =
     , mainmatter : content
     , backmatter : content
     }
+
+
+article : Decoder (Article Content)
+article =
+    map3 Article
+        (field "frontmatter" frontmatter)
+        (field "mainmatter" content)
+        (field "backmatter" content)
 
 
 type Content_target content
@@ -477,7 +486,7 @@ content_node =
         , field "Xml_elt" (xml_elt content) |> map Xml_elt
         , field "Transclude" (transclusion content) |> map Transclude
         , field "Results_of_query" (Query.expr int) |> map Results_of_query
-        , field "Section" (section content) |> map Section
+        , field "Section" section |> map Section
         , field "Prim"
             -- interesting, it's curried
             (prim
