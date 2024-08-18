@@ -1,6 +1,6 @@
 module XmlTreeSpec exposing (suite)
 
-import Base exposing (Addr(..), addr)
+import Base exposing (Addr(..), Math_mode(..), addr)
 import Expect
 import Json.Decode exposing (Decoder, decodeString)
 import Test exposing (Test)
@@ -113,6 +113,29 @@ xmleltCase =
     ( str, expected, content_node )
 
 
+katexCase : Testcase Content_node
+katexCase =
+    let
+        str =
+            """
+          {
+            "KaTeX": [
+              "Display",
+              [
+                {
+                  "Text": "a=b"
+                }
+              ]
+            ]
+          }
+"""
+
+        expected =
+            KaTeX Display (Content [ Text "a=b" ])
+    in
+    ( str, expected, content_node )
+
+
 targetCase : Testcase (Content_target Content)
 targetCase =
     let
@@ -175,11 +198,11 @@ suite =
             -- , run "CDATA" cdataCase
             , run "Xml_elt" xmleltCase
             , run "Transclude" transcludeCase
+            , run "KaTeX" katexCase
 
             -- , run "Results_of_query" resultsCase
             -- , run "Section" sectionCase
             -- , run "Prim" primCase
-            -- , run "KaTeX" katexCase
             -- , run "TeX_cs" texCsCase
             -- , run "Link" linkCase
             -- , run "Img" imgCase

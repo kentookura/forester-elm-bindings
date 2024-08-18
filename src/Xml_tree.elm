@@ -49,7 +49,7 @@ module Xml_tree exposing
     , xml_elt
     )
 
-import Base exposing (Addr, addr, xml_qname)
+import Base exposing (Addr, addr, math_mode, xml_qname)
 import Json.Decode as Decode
     exposing
         ( Decoder
@@ -499,6 +499,16 @@ type Content_node
     | Resource Resource_
 
 
+type KaTeXParts
+    = MM Base.Math_mode
+    | C Content
+
+
+katexPart : Decoder KaTeXParts
+katexPart =
+    oneOf [ math_mode |> map MM, content |> map C ]
+
+
 content_node : Decoder Content_node
 content_node =
     oneOf
@@ -509,7 +519,6 @@ content_node =
         , field "Results_of_query" (Query.expr int) |> map Results_of_query
         , field "Section" section |> map Section
         , field "Prim"
-            -- interesting, it's curried
             (prim
                 |> andThen
                     (\p ->
@@ -518,9 +527,16 @@ content_node =
                     )
             )
         , field "KaTeX"
-            (map2 KaTeX
-                (field "Math_mode" Base.math_mode)
-                (field "Content" content)
+            (list katexPart
+                |> andThen
+                    (\parts ->
+                        case parts of
+                            [ MM m, C c ] ->
+                                succeed (KaTeX m c)
+
+                            _ ->
+                                fail "failed to decode katex"
+                    )
             )
         , field "TeX_cs" tex_cs |> map TeX_cs
         , field "Link" (link content) |> map Link
