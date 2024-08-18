@@ -8,15 +8,17 @@ Rel of mode * polarity * Rel.t * 'var addr_expr
 ```
 
 ```json
-{ "Rel": [
-    "Paths",
-    "Outgoing",
-    "org.forester.rel.transclusion",
-    {
-        "Addr": {
-            "User_addr": "asdf"
+{ "Rel": 
+    [
+        "Paths",
+        "Outgoing",
+        "org.forester.rel.transclusion",
+        {
+            "Addr": {
+                "User_addr": "asdf"
+            }
         }
-    }
+    ]
 }
 ```
 
