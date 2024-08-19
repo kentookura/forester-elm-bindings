@@ -10,15 +10,15 @@ import Json.Decode exposing (decodeString)
 import Test exposing (Test)
 
 
-user_addr : String
-user_addr =
+userAddr : String
+userAddr =
     """
     { "User_addr": "asdf" }
     """
 
 
-machine_addr : String
-machine_addr =
+machineAddr : String
+machineAddr =
     """
     { "Machine_addr": 1000 }
     """
@@ -29,8 +29,8 @@ suite =
     Test.describe "Base"
         [ Test.describe "is able to decode base types"
             [ Test.test "user addrs" <|
-                \_ -> Expect.equal (decodeString addr user_addr) (Ok (UserAddr "asdf"))
+                \_ -> Expect.equal (decodeString addr userAddr) (Ok (UserAddr "asdf"))
             , Test.test "machine addrs" <|
-                \_ -> Expect.equal (decodeString addr machine_addr) (Ok (MachineAddr 1000))
+                \_ -> Expect.equal (decodeString addr machineAddr) (Ok (MachineAddr 1000))
             ]
         ]
