@@ -15,12 +15,12 @@ import Json.Decode
         , field
         , int
         , map
-        , map3
         , maybe
         , oneOf
         , string
         , succeed
         )
+import Json.Decode.Pipeline exposing (optional)
 
 
 type Addr
@@ -75,7 +75,7 @@ type alias Xml_qname =
 
 xml_qname : Decoder Xml_qname
 xml_qname =
-    map3 Xml_qname
-        (field "prefix" string)
-        (field "uname" string)
-        (field "xmlns" (maybe string))
+    succeed Xml_qname
+        |> optional "prefix" string ""
+        |> optional "uname" string ""
+        |> optional "xmlns" (maybe string) Nothing

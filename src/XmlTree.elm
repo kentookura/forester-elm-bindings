@@ -1,6 +1,5 @@
 module XmlTree exposing
-    ( Accumulator
-    , Article
+    ( Article
     , Attribution(..)
     , Content(..)
     , Content_node(..)
@@ -61,9 +60,6 @@ import Json.Decode as Decode
         , lazy
         , list
         , map
-        , map2
-        , map3
-        , map6
         , maybe
         , oneOf
         , string
@@ -129,7 +125,9 @@ type alias Xml_attr =
 
 xml_attr : Decoder Xml_attr
 xml_attr =
-    map2 Xml_attr (field "key" xml_qname) (field "value" string)
+    succeed Xml_attr
+        |> optional "key" xml_qname { prefix = "", uname = "", xmlns = Nothing }
+        |> optional "value" string ""
 
 
 type alias Xml_elt_ content =
@@ -168,6 +166,21 @@ type alias Frontmatter content =
     , source_path : Maybe String
     , tags : List String
     , metas : List ( String, content )
+    }
+
+
+empty_frontmatter : Frontmatter Content
+empty_frontmatter =
+    { addr = Base.Anon
+    , source_path = Nothing
+    , designated_parent = Nothing
+    , dates = []
+    , attributions = []
+    , taxon = Nothing
+    , number = Nothing
+    , metas = []
+    , tags = []
+    , title = Content []
     }
 
 
@@ -254,11 +267,11 @@ type alias Section_ content =
 
 section : Decoder (Section_ Content)
 section =
-    map3
+    succeed
         Section_
-        (field "frontmatter" frontmatter)
-        (field "mainmatter" content)
-        (field "flags" section_flags)
+        |> optional "frontmatter" frontmatter empty_frontmatter
+        |> optional "mainmatter" content (Content [])
+        |> optional "flags" section_flags default_section_flags
 
 
 type alias Article content =
@@ -270,10 +283,10 @@ type alias Article content =
 
 article : Decoder (Article Content)
 article =
-    map3 Article
-        (field "frontmatter" frontmatter)
-        (field "mainmatter" content)
-        (field "backmatter" content)
+    succeed Article
+        |> optional "frontmatter" frontmatter empty_frontmatter
+        |> optional "mainmatter" content (Content [])
+        |> optional "backmatter" content (Content [])
 
 
 type Content_target content
@@ -346,10 +359,10 @@ type alias Transclusion content =
 
 transclusion : Decoder content -> Decoder (Transclusion content)
 transclusion c =
-    map3 Transclusion
-        (field "addr" addr)
-        (field "target" (content_target c))
-        (field "modifier" modifier)
+    succeed Transclusion
+        |> required "addr" addr
+        |> required "target" (content_target c)
+        |> optional "modifier" modifier Identity
 
 
 type alias Link_ content =
@@ -358,10 +371,10 @@ type alias Link_ content =
 
 link : Decoder content -> Decoder (Link_ content)
 link c =
-    map2
+    succeed
         Link_
-        (field "href" string)
-        (field "content" c)
+        |> required "href" string
+        |> required "content" c
 
 
 type alias Inline_img =
@@ -370,7 +383,9 @@ type alias Inline_img =
 
 inline_img : Decoder Inline_img
 inline_img =
-    map2 Inline_img (field "format" string) (field "base64" string)
+    succeed Inline_img
+        |> optional "format" string ""
+        |> optional "base64" string ""
 
 
 type alias Resource_source =
@@ -379,10 +394,10 @@ type alias Resource_source =
 
 resource_source : Decoder Resource_source
 resource_source =
-    map3 Resource_source
-        (field "type_" string)
-        (field "parts" string)
-        (field "source" string)
+    succeed Resource_source
+        |> optional "type_" string ""
+        |> optional "parts" string ""
+        |> optional "source" string ""
 
 
 type Img
@@ -410,6 +425,11 @@ type Prim
     | Pre
     | Figure
     | Figcaption
+
+
+type PrimPart
+    = PP Prim
+    | CL Content
 
 
 prim : Decoder Prim
@@ -454,6 +474,14 @@ prim =
                     _ ->
                         fail "failed to decode Prim"
             )
+
+
+primPart : Decoder PrimPart
+primPart =
+    oneOf
+        [ prim |> map PP
+        , content |> map CL
+        ]
 
 
 type TeX_cs
@@ -519,11 +547,15 @@ content_node =
         , field "Results_of_query" (Query.expr int) |> map Results_of_query
         , field "Section" section |> map Section
         , field "Prim"
-            (prim
+            (list primPart
                 |> andThen
-                    (\p ->
-                        content
-                            |> map (\c -> Prim ( p, c ))
+                    (\parts ->
+                        case parts of
+                            [ PP p, CL c ] ->
+                                succeed (Prim ( p, c ))
+
+                            _ ->
+                                fail "failed to decode prim"
                     )
             )
         , field "KaTeX"
@@ -560,7 +592,7 @@ type alias Resource_ =
 
 resource : Decoder Resource_
 resource =
-    map3 Resource_
-        (field "hash" string)
-        (field "content" content)
-        (field "sources" (list resource_source))
+    succeed Resource_
+        |> optional "hash" string ""
+        |> optional "content" content (Content [])
+        |> optional "sources" (list resource_source) []
