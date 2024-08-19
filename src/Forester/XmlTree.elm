@@ -1,4 +1,4 @@
-module XmlTree exposing
+module Forester.XmlTree exposing
     ( Article
     , Attribution(..)
     , Content(..)
@@ -48,7 +48,9 @@ module XmlTree exposing
     , xmlElt
     )
 
-import Base exposing (Addr, addr, mathMode, xmlQname)
+import Forester.Base exposing (Addr(..), MathMode, XmlQname, addr, mathMode, xmlQname)
+import Forester.Prelude exposing (Date, date)
+import Forester.Query as Query
 import Json.Decode as Decode
     exposing
         ( Decoder
@@ -66,8 +68,6 @@ import Json.Decode as Decode
         , succeed
         )
 import Json.Decode.Pipeline exposing (optional, required)
-import Prelude exposing (Date, date)
-import Query
 
 
 type alias SectionFlags =
@@ -121,7 +121,7 @@ frontmatterOverrides c =
 
 
 type alias XmlAttr =
-    { key : Base.XmlQname, value : String }
+    { key : XmlQname, value : String }
 
 
 xmlAttr : Decoder XmlAttr
@@ -132,7 +132,7 @@ xmlAttr =
 
 
 type alias XmlElt_ content =
-    { name : Base.XmlQname, attrs : List XmlAttr, content : content }
+    { name : XmlQname, attrs : List XmlAttr, content : content }
 
 
 xmlElt : Decoder (XmlElt_ Content)
@@ -172,7 +172,7 @@ type alias Frontmatter content =
 
 emptyFrontmatter : Frontmatter Content
 emptyFrontmatter =
-    { addr = Base.Anon
+    { addr = Anon
     , source_path = Nothing
     , designated_parent = Nothing
     , dates = []
@@ -521,7 +521,7 @@ type ContentNode
     | ResultsOfQuery (Query.Expr Query.Dbix)
     | Section (Section_ Content)
     | Prim ( Prim, Content )
-    | KaTeX Base.MathMode Content
+    | KaTeX MathMode Content
     | TeXCs TeXCs_
     | Link (Link_ Content)
     | Img Img
@@ -529,7 +529,7 @@ type ContentNode
 
 
 type KaTeXParts
-    = MM Base.MathMode
+    = MM MathMode
     | C Content
 
 

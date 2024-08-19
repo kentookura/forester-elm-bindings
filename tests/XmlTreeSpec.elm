@@ -1,10 +1,8 @@
 module XmlTreeSpec exposing (suite)
 
-import Base exposing (Addr(..), MathMode(..), XmlQname, addr)
 import Expect exposing (onFail)
-import Json.Decode exposing (Decoder, decodeString, errorToString, field)
-import Test exposing (Test)
-import XmlTree
+import Forester.Base exposing (Addr(..), MathMode(..), XmlQname, addr)
+import Forester.XmlTree
     exposing
         ( Article
         , Content(..)
@@ -25,6 +23,8 @@ import XmlTree
         , emptyFrontmatterOverrides
         , frontmatter
         )
+import Json.Decode exposing (Decoder, decodeString, errorToString, field)
+import Test exposing (Test)
 
 
 type alias Testcase a =

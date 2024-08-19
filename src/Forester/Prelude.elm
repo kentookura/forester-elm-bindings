@@ -1,4 +1,4 @@
-module Prelude exposing (Date, date)
+module Forester.Prelude exposing (Date, date)
 
 import Json.Decode exposing (Decoder, field, int, map3, maybe)
 

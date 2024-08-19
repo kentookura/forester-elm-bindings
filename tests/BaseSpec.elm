@@ -1,11 +1,11 @@
 module BaseSpec exposing (suite)
 
-import Base
+import Expect
+import Forester.Base
     exposing
         ( Addr(..)
         , addr
         )
-import Expect
 import Json.Decode exposing (decodeString)
 import Test exposing (Test)
 

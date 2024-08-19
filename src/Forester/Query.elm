@@ -1,4 +1,4 @@
-module Query exposing
+module Forester.Query exposing
     ( AddrExpr(..)
     , Dbix
     , Expr(..)
@@ -8,7 +8,7 @@ module Query exposing
     , expr
     )
 
-import Base exposing (addr)
+import Forester.Base exposing (Addr, addr)
 import Json.Decode
     exposing
         ( Decoder
@@ -83,13 +83,13 @@ binder a =
 
 
 type AddrExpr var
-    = Addr Base.Addr
+    = Addr Addr
     | Var var
 
 
 addrExpr : Decoder var -> Decoder (AddrExpr var)
 addrExpr v =
-    oneOf [ field "Addr" (Base.addr |> map Addr), field "Var" v |> map Var ]
+    oneOf [ field "Addr" (addr |> map Addr), field "Var" v |> map Var ]
 
 
 type alias Dbix =

@@ -1,9 +1,8 @@
 module QuerySpec exposing (suite)
 
-import Base exposing (Addr(..), addr)
 import Expect
-import Json.Decode exposing (decodeString)
-import Query
+import Forester.Base exposing (Addr(..), addr)
+import Forester.Query
     exposing
         ( AddrExpr(..)
         , Dbix
@@ -13,6 +12,7 @@ import Query
         , dbix
         , expr
         )
+import Json.Decode exposing (decodeString)
 import Test exposing (Test)
 
 

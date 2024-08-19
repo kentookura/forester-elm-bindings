@@ -1,4 +1,4 @@
-module Base exposing
+module Forester.Base exposing
     ( Addr(..)
     , MathMode(..)
     , XmlQname
