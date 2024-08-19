@@ -1,8 +1,13 @@
 module Forester.Base exposing
     ( Addr(..)
+    , Binding
+    , BindingStrategy(..)
+    , Delim(..)
     , MathMode(..)
+    , Visibility(..)
     , XmlQname
     , addr
+    , delimToString
     , mathMode
     , xmlQname
     )
@@ -21,6 +26,39 @@ import Json.Decode
         , succeed
         )
 import Json.Decode.Pipeline exposing (optional)
+
+
+type Delim
+    = Braces
+    | Squares
+    | Parens
+
+
+delimToString : Delim -> ( String, String )
+delimToString d =
+    case d of
+        Braces ->
+            ( "{", "}" )
+
+        Squares ->
+            ( "[", "]" )
+
+        Parens ->
+            ( "(", ")" )
+
+
+type BindingStrategy
+    = Lazy
+    | Strict
+
+
+type alias Binding a =
+    ( BindingStrategy, a )
+
+
+type Visibility
+    = Private
+    | Public
 
 
 type Addr

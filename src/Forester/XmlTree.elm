@@ -48,7 +48,15 @@ module Forester.XmlTree exposing
     , xmlElt
     )
 
-import Forester.Base exposing (Addr(..), MathMode, XmlQname, addr, mathMode, xmlQname)
+import Forester.Base
+    exposing
+        ( Addr(..)
+        , MathMode
+        , XmlQname
+        , addr
+        , mathMode
+        , xmlQname
+        )
 import Forester.Prelude exposing (Date, date)
 import Forester.Query as Query
 import Json.Decode as Decode
@@ -234,7 +242,7 @@ folder parts ( state, acc ) =
                     ( Just (MetaId str), acc )
 
                 _ ->
-                    ( Nothing, [] )
+                    ( Nothing, acc )
 
         Just (MetaId str) ->
             case parts of
