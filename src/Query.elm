@@ -1,5 +1,5 @@
 module Query exposing
-    ( Addr_expr(..)
+    ( AddrExpr(..)
     , Dbix
     , Expr(..)
     , Mode(..)
@@ -19,8 +19,6 @@ import Json.Decode
         , lazy
         , list
         , map
-        , map2
-        , map4
         , oneOf
         , string
         , succeed
@@ -84,13 +82,13 @@ binder a =
     map Binder (field "body" a)
 
 
-type Addr_expr var
+type AddrExpr var
     = Addr Base.Addr
     | Var var
 
 
-addr_expr : Decoder var -> Decoder (Addr_expr var)
-addr_expr v =
+addrExpr : Decoder var -> Decoder (AddrExpr var)
+addrExpr v =
     oneOf [ field "Addr" (Base.addr |> map Addr), field "Var" v |> map Var ]
 
 
@@ -104,12 +102,12 @@ dbix =
 
 
 type Expr var
-    = Rel Mode Polarity Rel (Addr_expr var)
+    = Rel Mode Polarity Rel (AddrExpr var)
     | Isect (List (Expr var))
     | Union (List (Expr var))
     | Complement (Expr var)
-    | Union_fam (Expr var) (Binder (Expr var))
-    | Isect_fam (Expr var) (Binder (Expr var))
+    | UnionFam (Expr var) (Binder (Expr var))
+    | IsectFam (Expr var) (Binder (Expr var))
 
 
 type FamPart var
@@ -143,7 +141,7 @@ type Relpart var
     = M Mode
     | P Polarity
     | R Rel
-    | AE (Addr_expr var)
+    | AE (AddrExpr var)
 
 
 relpart : Decoder var -> Decoder (Relpart var)
@@ -152,7 +150,7 @@ relpart var =
         [ mode |> map M
         , polarity |> map P
         , string |> map R
-        , addr_expr var |> map AE
+        , addrExpr var |> map AE
         ]
 
 
@@ -177,6 +175,6 @@ expr var =
         , field "Isect" (list (lazy (\_ -> expr var)) |> map Isect)
         , field "Union" (list (lazy (\_ -> expr var)) |> map Union)
         , field "Complement" (lazy (\_ -> expr var) |> map Complement)
-        , field "Union_fam" (lazy (\_ -> fam Union_fam var))
-        , field "Isect_fam" (lazy (\_ -> fam Isect_fam var))
+        , field "Union_fam" (lazy (\_ -> fam UnionFam var))
+        , field "Isect_fam" (lazy (\_ -> fam IsectFam var))
         ]

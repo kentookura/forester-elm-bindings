@@ -1,6 +1,6 @@
 module XmlTreeSpec exposing (suite)
 
-import Base exposing (Addr(..), Math_mode(..), Xml_qname, addr)
+import Base exposing (Addr(..), MathMode(..), XmlQname, addr)
 import Expect exposing (onFail)
 import Json.Decode exposing (Decoder, decodeString, errorToString, field)
 import Test exposing (Test)
@@ -8,21 +8,21 @@ import XmlTree
     exposing
         ( Article
         , Content(..)
-        , Content_node(..)
-        , Content_target(..)
+        , ContentNode(..)
+        , ContentTarget(..)
         , Frontmatter
         , Modifier(..)
         , Prim(..)
-        , TeX_cs(..)
+        , TeXCs_(..)
         , Transclusion
-        , Xml_attr
-        , Xml_elt_
+        , XmlAttr
+        , XmlElt_
         , article
         , content
-        , content_node
-        , content_target
-        , default_section_flags
-        , empty_frontmatter_overrides
+        , contentNode
+        , contentTarget
+        , defaultSectionFlags
+        , emptyFrontmatterOverrides
         , frontmatter
         )
 
@@ -67,7 +67,7 @@ frontmatterCase =
         """
 
         expected =
-            { addr = User_addr "queries"
+            { addr = UserAddr "queries"
             , attributions = []
             , dates = []
             , designated_parent = Nothing
@@ -82,7 +82,7 @@ frontmatterCase =
     ( str, expected, frontmatter )
 
 
-textCase : Testcase Content_node
+textCase : Testcase ContentNode
 textCase =
     let
         str =
@@ -92,10 +92,10 @@ textCase =
         expected =
             Text "hello"
     in
-    ( str, expected, content_node )
+    ( str, expected, contentNode )
 
 
-xmleltCase1 : Testcase Content_node
+xmleltCase1 : Testcase ContentNode
 xmleltCase1 =
     let
         str =
@@ -125,7 +125,7 @@ xmleltCase1 =
       }
     """
 
-        elt : Xml_elt_ Content
+        elt : XmlElt_ Content
         elt =
             { name =
                 { prefix = "mml"
@@ -145,9 +145,9 @@ xmleltCase1 =
             }
 
         expected =
-            Xml_elt elt
+            XmlElt elt
     in
-    ( str, expected, content_node )
+    ( str, expected, contentNode )
 
 
 xmleltCase2 : Testcase Content
@@ -257,14 +257,14 @@ xmleltCase2 =
             Content
                 [ Text " "
                 , Text " "
-                , Xml_elt { attrs = [], content = Content [ Text " ", Text "  ", Xml_elt { attrs = [ { key = { prefix = "", uname = "style", xmlns = Nothing }, value = "white-space:nowrap" } ], content = Content [ Text " ", Text "   ", Prim ( Code, Content [ Text "x" ] ), Text " ", Text "  " ], name = { prefix = "html", uname = "td", xmlns = Just "http://www.w3.org/1999/xhtml" } }, Text " ", Text "  ", Xml_elt { attrs = [], content = Content [ Text "y" ], name = { prefix = "html", uname = "td", xmlns = Just "http://www.w3.org/1999/xhtml" } }, Text " ", Text " " ], name = { prefix = "html", uname = "tr", xmlns = Just "http://www.w3.org/1999/xhtml" } }
+                , XmlElt { attrs = [], content = Content [ Text " ", Text "  ", XmlElt { attrs = [ { key = { prefix = "", uname = "style", xmlns = Nothing }, value = "white-space:nowrap" } ], content = Content [ Text " ", Text "   ", Prim ( Code, Content [ Text "x" ] ), Text " ", Text "  " ], name = { prefix = "html", uname = "td", xmlns = Just "http://www.w3.org/1999/xhtml" } }, Text " ", Text "  ", XmlElt { attrs = [], content = Content [ Text "y" ], name = { prefix = "html", uname = "td", xmlns = Just "http://www.w3.org/1999/xhtml" } }, Text " ", Text " " ], name = { prefix = "html", uname = "tr", xmlns = Just "http://www.w3.org/1999/xhtml" } }
                 , Text " "
                 ]
     in
     ( str, expected, content )
 
 
-katexCase : Testcase Content_node
+katexCase : Testcase ContentNode
 katexCase =
     let
         str =
@@ -284,10 +284,10 @@ katexCase =
         expected =
             KaTeX Display (Content [ Text "a=b" ])
     in
-    ( str, expected, content_node )
+    ( str, expected, contentNode )
 
 
-texCsCase : Testcase Content_node
+texCsCase : Testcase ContentNode
 texCsCase =
     let
         str =
@@ -300,12 +300,12 @@ texCsCase =
 """
 
         expected =
-            TeX_cs (Word "img")
+            TeXCs (Word "img")
     in
-    ( str, expected, content_node )
+    ( str, expected, contentNode )
 
 
-targetCase : Testcase (Content_target Content)
+targetCase : Testcase (ContentTarget Content)
 targetCase =
     let
         str =
@@ -320,12 +320,12 @@ targetCase =
     """
 
         expected =
-            Full default_section_flags empty_frontmatter_overrides
+            Full defaultSectionFlags emptyFrontmatterOverrides
     in
-    ( str, expected, content_target content )
+    ( str, expected, contentTarget content )
 
 
-transcludeCase : Testcase Content_node
+transcludeCase : Testcase ContentNode
 transcludeCase =
     let
         str =
@@ -350,12 +350,12 @@ transcludeCase =
 
         expected =
             Transclude
-                { addr = Machine_addr 31999
-                , target = Full default_section_flags empty_frontmatter_overrides
+                { addr = MachineAddr 31999
+                , target = Full defaultSectionFlags emptyFrontmatterOverrides
                 , modifier = Identity
                 }
     in
-    ( str, expected, content_node )
+    ( str, expected, contentNode )
 
 
 suite : Test

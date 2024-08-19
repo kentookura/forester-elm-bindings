@@ -2,37 +2,37 @@ module XmlTree exposing
     ( Article
     , Attribution(..)
     , Content(..)
-    , Content_node(..)
-    , Content_target(..)
+    , ContentNode(..)
+    , ContentTarget(..)
     , Frontmatter
-    , Frontmatter_overrides
+    , FrontmatterOverrides
     , Img(..)
-    , Inline_img
+    , InlineImg
     , Link_
     , MetaPart(..)
     , Modifier(..)
     , Prim(..)
+    , ResourceSource
     , Resource_
-    , Resource_source
+    , SectionFlags
     , Section_
-    , Section_flags
-    , TeX_cs(..)
+    , TeXCs_(..)
     , Transclusion
-    , Xml_attr
-    , Xml_elt_
+    , XmlAttr
+    , XmlElt_
     , article
     , attribution
     , content
-    , content_node
-    , content_target
+    , contentNode
+    , contentTarget
     , createPairs
-    , default_section_flags
-    , empty_frontmatter_overrides
+    , defaultSectionFlags
+    , emptyFrontmatterOverrides
     , folder
     , frontmatter
-    , frontmatter_overrides
+    , frontmatterOverrides
     , img
-    , inline_img
+    , inlineImg
     , link
     , metas
     , modifier
@@ -41,14 +41,14 @@ module XmlTree exposing
     , resource
     , resource_source
     , section
-    , section_flags
-    , tex_cs
+    , sectionFlags
+    , texCs
     , transclusion
-    , xml_attr
-    , xml_elt
+    , xmlAttr
+    , xmlElt
     )
 
-import Base exposing (Addr, addr, math_mode, xml_qname)
+import Base exposing (Addr, addr, mathMode, xmlQname)
 import Json.Decode as Decode
     exposing
         ( Decoder
@@ -70,7 +70,7 @@ import Prelude exposing (Date, date)
 import Query
 
 
-type alias Section_flags =
+type alias SectionFlags =
     { hidden_when_empty : Maybe Bool
     , included_in_toc : Maybe Bool
     , header_shown : Maybe Bool
@@ -80,8 +80,8 @@ type alias Section_flags =
     }
 
 
-default_section_flags : Section_flags
-default_section_flags =
+defaultSectionFlags : SectionFlags
+defaultSectionFlags =
     { hidden_when_empty = Nothing
     , included_in_toc = Nothing
     , header_shown = Nothing
@@ -91,9 +91,9 @@ default_section_flags =
     }
 
 
-section_flags : Decoder Section_flags
-section_flags =
-    succeed Section_flags
+sectionFlags : Decoder SectionFlags
+sectionFlags =
+    succeed SectionFlags
         |> optional "hidden_when_empty" (maybe bool) Nothing
         |> optional "included_in_toc" (maybe bool) Nothing
         |> optional "header_shown" (maybe bool) Nothing
@@ -102,43 +102,44 @@ section_flags =
         |> optional "expanded" (maybe bool) Nothing
 
 
-type alias Frontmatter_overrides content =
+type alias FrontmatterOverrides content =
     { title : Maybe content
     , taxon : Maybe (Maybe String)
     }
 
 
-empty_frontmatter_overrides =
+emptyFrontmatterOverrides : FrontmatterOverrides content
+emptyFrontmatterOverrides =
     { title = Nothing, taxon = Nothing }
 
 
-frontmatter_overrides : Decoder content -> Decoder (Frontmatter_overrides content)
-frontmatter_overrides c =
-    succeed Frontmatter_overrides
+frontmatterOverrides : Decoder content -> Decoder (FrontmatterOverrides content)
+frontmatterOverrides c =
+    succeed FrontmatterOverrides
         |> optional "title" (maybe c) Nothing
         |> optional "taxon" (maybe (maybe string)) Nothing
 
 
-type alias Xml_attr =
-    { key : Base.Xml_qname, value : String }
+type alias XmlAttr =
+    { key : Base.XmlQname, value : String }
 
 
-xml_attr : Decoder Xml_attr
-xml_attr =
-    succeed Xml_attr
-        |> optional "key" xml_qname { prefix = "", uname = "", xmlns = Nothing }
+xmlAttr : Decoder XmlAttr
+xmlAttr =
+    succeed XmlAttr
+        |> optional "key" xmlQname { prefix = "", uname = "", xmlns = Nothing }
         |> optional "value" string ""
 
 
-type alias Xml_elt_ content =
-    { name : Base.Xml_qname, attrs : List Xml_attr, content : content }
+type alias XmlElt_ content =
+    { name : Base.XmlQname, attrs : List XmlAttr, content : content }
 
 
-xml_elt : Decoder (Xml_elt_ Content)
-xml_elt =
-    succeed Xml_elt_
-        |> required "name" xml_qname
-        |> optional "attrs" (list xml_attr) []
+xmlElt : Decoder (XmlElt_ Content)
+xmlElt =
+    succeed XmlElt_
+        |> required "name" xmlQname
+        |> optional "attrs" (list xmlAttr) []
         |> optional "content" content (Content [])
 
 
@@ -169,8 +170,8 @@ type alias Frontmatter content =
     }
 
 
-empty_frontmatter : Frontmatter Content
-empty_frontmatter =
+emptyFrontmatter : Frontmatter Content
+emptyFrontmatter =
     { addr = Base.Anon
     , source_path = Nothing
     , designated_parent = Nothing
@@ -262,16 +263,16 @@ metas c =
 
 
 type alias Section_ content =
-    { frontmatter : Frontmatter content, mainmatter : content, flags : Section_flags }
+    { frontmatter : Frontmatter content, mainmatter : content, flags : SectionFlags }
 
 
 section : Decoder (Section_ Content)
 section =
     succeed
         Section_
-        |> optional "frontmatter" frontmatter empty_frontmatter
+        |> optional "frontmatter" frontmatter emptyFrontmatter
         |> optional "mainmatter" content (Content [])
-        |> optional "flags" section_flags default_section_flags
+        |> optional "flags" sectionFlags defaultSectionFlags
 
 
 type alias Article content =
@@ -284,30 +285,30 @@ type alias Article content =
 article : Decoder (Article Content)
 article =
     succeed Article
-        |> optional "frontmatter" frontmatter empty_frontmatter
+        |> optional "frontmatter" frontmatter emptyFrontmatter
         |> optional "mainmatter" content (Content [])
         |> optional "backmatter" content (Content [])
 
 
-type Content_target content
-    = Full Section_flags (Frontmatter_overrides content)
+type ContentTarget content
+    = Full SectionFlags (FrontmatterOverrides content)
     | Mainmatter
     | Title
     | Taxon
     | Number
 
 
-content_target : Decoder content -> Decoder (Content_target content)
-content_target c =
+contentTarget : Decoder content -> Decoder (ContentTarget content)
+contentTarget c =
     oneOf
         [ field "Full"
             (succeed
                 Full
-                |> optional "Section_flags" section_flags default_section_flags
+                |> optional "Section_flags" sectionFlags defaultSectionFlags
                 |> optional
                     "Frontmatter_overrides"
-                    (frontmatter_overrides c)
-                    empty_frontmatter_overrides
+                    (frontmatterOverrides c)
+                    emptyFrontmatterOverrides
             )
         , string
             |> andThen
@@ -332,7 +333,7 @@ content_target c =
 
 
 type Modifier
-    = Sentence_case
+    = SentenceCase
     | Identity
 
 
@@ -343,7 +344,7 @@ modifier =
             (\str ->
                 case str of
                     "Sentence_case" ->
-                        succeed Sentence_case
+                        succeed SentenceCase
 
                     "Identity" ->
                         succeed Identity
@@ -354,14 +355,14 @@ modifier =
 
 
 type alias Transclusion content =
-    { addr : Addr, target : Content_target content, modifier : Modifier }
+    { addr : Addr, target : ContentTarget content, modifier : Modifier }
 
 
 transclusion : Decoder content -> Decoder (Transclusion content)
 transclusion c =
     succeed Transclusion
         |> required "addr" addr
-        |> required "target" (content_target c)
+        |> required "target" (contentTarget c)
         |> optional "modifier" modifier Identity
 
 
@@ -377,38 +378,38 @@ link c =
         |> required "content" c
 
 
-type alias Inline_img =
+type alias InlineImg =
     { format : String, base64 : String }
 
 
-inline_img : Decoder Inline_img
-inline_img =
-    succeed Inline_img
+inlineImg : Decoder InlineImg
+inlineImg =
+    succeed InlineImg
         |> optional "format" string ""
         |> optional "base64" string ""
 
 
-type alias Resource_source =
+type alias ResourceSource =
     { type_ : String, part : String, source : String }
 
 
-resource_source : Decoder Resource_source
+resource_source : Decoder ResourceSource
 resource_source =
-    succeed Resource_source
+    succeed ResourceSource
         |> optional "type_" string ""
         |> optional "parts" string ""
         |> optional "source" string ""
 
 
 type Img
-    = Inline Inline_img
+    = Inline InlineImg
     | Remote String
 
 
 img : Decoder Img
 img =
     oneOf
-        [ map Inline (field "Inline" inline_img)
+        [ map Inline (field "Inline" inlineImg)
         , map Remote (field "Remote" string)
         ]
 
@@ -484,13 +485,13 @@ primPart =
         ]
 
 
-type TeX_cs
+type TeXCs_
     = Word String
     | Symbol Char
 
 
-tex_cs : Decoder TeX_cs
-tex_cs =
+texCs : Decoder TeXCs_
+texCs =
     oneOf
         [ map Word
             (field "Word" string)
@@ -512,39 +513,39 @@ tex_cs =
         ]
 
 
-type Content_node
+type ContentNode
     = Text String
     | CDATA String
-    | Xml_elt (Xml_elt_ Content)
+    | XmlElt (XmlElt_ Content)
     | Transclude (Transclusion Content)
-    | Results_of_query (Query.Expr Query.Dbix)
+    | ResultsOfQuery (Query.Expr Query.Dbix)
     | Section (Section_ Content)
     | Prim ( Prim, Content )
-    | KaTeX Base.Math_mode Content
-    | TeX_cs TeX_cs
+    | KaTeX Base.MathMode Content
+    | TeXCs TeXCs_
     | Link (Link_ Content)
     | Img Img
     | Resource Resource_
 
 
 type KaTeXParts
-    = MM Base.Math_mode
+    = MM Base.MathMode
     | C Content
 
 
 katexPart : Decoder KaTeXParts
 katexPart =
-    oneOf [ math_mode |> map MM, content |> map C ]
+    oneOf [ mathMode |> map MM, content |> map C ]
 
 
-content_node : Decoder Content_node
-content_node =
+contentNode : Decoder ContentNode
+contentNode =
     oneOf
         [ field "Text" string |> map Text
         , field "CDATA" string |> map CDATA
-        , field "Xml_elt" xml_elt |> map Xml_elt
+        , field "Xml_elt" xmlElt |> map XmlElt
         , field "Transclude" (transclusion content) |> map Transclude
-        , field "Results_of_query" (Query.expr int) |> map Results_of_query
+        , field "Results_of_query" (Query.expr int) |> map ResultsOfQuery
         , field "Section" section |> map Section
         , field "Prim"
             (list primPart
@@ -570,7 +571,7 @@ content_node =
                                 fail "failed to decode katex"
                     )
             )
-        , field "TeX_cs" tex_cs |> map TeX_cs
+        , field "TeX_cs" texCs |> map TeXCs
         , field "Link" (link content) |> map Link
         , field "Img" img |> map Img
         , field "Resource" resource |> map Resource
@@ -578,16 +579,16 @@ content_node =
 
 
 type Content
-    = Content (List Content_node)
+    = Content (List ContentNode)
 
 
 content : Decoder Content
 content =
-    list (lazy (\_ -> content_node)) |> map Content
+    list (lazy (\_ -> contentNode)) |> map Content
 
 
 type alias Resource_ =
-    { hash : String, content : Content, sources : List Resource_source }
+    { hash : String, content : Content, sources : List ResourceSource }
 
 
 resource : Decoder Resource_

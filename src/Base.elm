@@ -1,10 +1,10 @@
 module Base exposing
     ( Addr(..)
-    , Math_mode(..)
-    , Xml_qname
+    , MathMode(..)
+    , XmlQname
     , addr
-    , math_mode
-    , xml_qname
+    , mathMode
+    , xmlQname
     )
 
 import Json.Decode
@@ -24,18 +24,18 @@ import Json.Decode.Pipeline exposing (optional)
 
 
 type Addr
-    = User_addr String
-    | Machine_addr Int
-    | Hash_addr String
+    = UserAddr String
+    | MachineAddr Int
+    | HashAddr String
     | Anon
 
 
 addr : Decoder Addr
 addr =
     oneOf
-        [ field "User_addr" string |> map User_addr
-        , field "Machine_addr" int |> map Machine_addr
-        , field "Hash_addr" string |> map Hash_addr
+        [ field "User_addr" string |> map UserAddr
+        , field "Machine_addr" int |> map MachineAddr
+        , field "Hash_addr" string |> map HashAddr
         , string
             |> andThen
                 (\str ->
@@ -48,13 +48,13 @@ addr =
         ]
 
 
-type Math_mode
+type MathMode
     = Inline
     | Display
 
 
-math_mode : Decoder Math_mode
-math_mode =
+mathMode : Decoder MathMode
+mathMode =
     string
         |> andThen
             (\str ->
@@ -69,13 +69,13 @@ math_mode =
             )
 
 
-type alias Xml_qname =
+type alias XmlQname =
     { prefix : String, uname : String, xmlns : Maybe String }
 
 
-xml_qname : Decoder Xml_qname
-xml_qname =
-    succeed Xml_qname
+xmlQname : Decoder XmlQname
+xmlQname =
+    succeed XmlQname
         |> optional "prefix" string ""
         |> optional "uname" string ""
         |> optional "xmlns" (maybe string) Nothing

@@ -5,7 +5,7 @@ import Expect
 import Json.Decode exposing (decodeString)
 import Query
     exposing
-        ( Addr_expr(..)
+        ( AddrExpr(..)
         , Dbix
         , Expr(..)
         , Mode(..)
@@ -22,7 +22,7 @@ r =
         Paths
         Outgoing
         "org.forester.rel.transclusion"
-        (Addr (User_addr "asdf"))
+        (Addr (UserAddr "asdf"))
 
 
 r_str : String
@@ -44,12 +44,12 @@ r_str =
 
 u : Expr Dbix
 u =
-    Union_fam
+    UnionFam
         (Rel
             Paths
             Outgoing
             "org.forester.rel.transclusion"
-            (Addr (User_addr "asdf"))
+            (Addr (UserAddr "asdf"))
         )
         { body =
             Rel
@@ -101,13 +101,13 @@ e =
             Edges
             Outgoing
             "org.forester.rel.links"
-            (Addr (User_addr "queries"))
+            (Addr (UserAddr "queries"))
         , Complement
             (Rel
                 Edges
                 Incoming
                 "org.forester.rel.taxa"
-                (Addr (User_addr "reference"))
+                (Addr (UserAddr "reference"))
             )
         ]
 
