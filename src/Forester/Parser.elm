@@ -2,11 +2,9 @@ module Forester.Parser exposing
     ( alloc
     , arg
     , binder
-    , binderHelp
     , binders
     , bvar
     , call
-    , codeExpr
     , declXmlns
     , def
     , default
@@ -21,18 +19,17 @@ module Forester.Parser exposing
     , import_
     , inline
     , let_
-    , list
-    , methodDecl
     , namespace
     , node
+    , nodes
     , object
     , open
     , patch
     , put
     , scope
     , subtree
-    , textualExpr
     , textualNode
+    , textualNodes
     , verbatim
     , xmlAttr
     , xmlBaseIdent
@@ -48,15 +45,17 @@ import Forester.Parser.Utils
     exposing
         ( braces
         , delimited
+        , isWhitespace
         , option
         , parens
         , squares
         , text
         , txtArg
+        , wschar
         , wstext
         )
-import Forester.Syntax as Syntax exposing (Node(..))
-import Forester.XmlTree exposing (Modifier(..))
+import Forester.Syntax as Syntax exposing (Method, Node(..))
+import Forester.XmlTree exposing (Modifier(..), XmlAttr)
 import Parser
     exposing
         ( (|.)
@@ -66,15 +65,20 @@ import Parser
         , andThen
         , chompWhile
         , getChompedString
+        , getOffset
+        , getSource
         , lazy
         , loop
         , map
         , oneOf
+        , problem
         , succeed
         , symbol
         )
 
 
+
+{--
 list : Parser a -> Parser (List a)
 list p =
     let
@@ -88,6 +92,7 @@ list p =
                 ]
     in
     loop [] aux
+--}
 
 
 def : Parser Syntax.Node
@@ -125,7 +130,7 @@ namespace =
     succeed Namespace
         |. symbol "\\namespace"
         |= ident
-        |= braces codeExpr
+        |= braces nodes
 
 
 subtree : Parser Syntax.Node
@@ -222,6 +227,20 @@ xmlAttr =
             )
 
 
+attrsHelp : List ( ( Maybe String, String ), List Node ) -> Parser (Step (List ( ( Maybe String, String ), List Node )) (List ( ( Maybe String, String ), List Node )))
+attrsHelp revAttrs =
+    oneOf
+        [ succeed (\a -> Loop (a :: revAttrs))
+            |= xmlAttr
+        , succeed () |> map (\_ -> Done (List.reverse revAttrs))
+        ]
+
+
+xmlAttrs : Parser (List ( ( Maybe String, String ), List Node ))
+xmlAttrs =
+    loop [] attrsHelp
+
+
 xmlBaseIdent : Parser String
 xmlBaseIdent =
     getChompedString <| succeed () |. chompWhile (\c -> Char.isAlpha c || Char.isDigit c || c == '-' || c == '_')
@@ -244,7 +263,7 @@ xmlTag =
     succeed XmlTag
         |. symbol "\\<"
         |= xmlQname
-        |= list xmlAttr
+        |= xmlAttrs
         |= arg
 
 
@@ -263,20 +282,33 @@ object =
         |= option (squares bvar)
         |> andThen
             (\slf ->
-                braces (list methodDecl)
+                braces methods
                     |> andThen
-                        (\methods -> succeed (Object { self = slf, methods = methods }))
+                        (\ms -> succeed (Object { self = slf, methods = ms }))
             )
 
 
-methodDecl : Parser ( String, List Node )
-methodDecl =
+method : Parser Method
+method =
     squares text
         |> andThen
             (\k ->
                 arg
                     |> andThen (\v -> succeed ( k, v ))
             )
+
+
+methods : Parser (List Method)
+methods =
+    loop [] methodHelp
+
+
+methodHelp : List Method -> Parser (Step (List Method) (List Method))
+methodHelp revMethods =
+    oneOf
+        [ succeed (\m -> Loop (m :: revMethods)) |= method
+        , succeed () |> map (\_ -> Done (List.reverse revMethods))
+        ]
 
 
 bvar : Parser (List String)
@@ -288,15 +320,15 @@ patch : Parser Syntax.Node
 patch =
     succeed Patch
         |. symbol "\\patch"
-        |= (braces codeExpr
+        |= (braces nodes
                 |> andThen
                     (\obj ->
                         option (squares bvar)
                             |> andThen
                                 (\self ->
                                     braces
-                                        (list methodDecl
-                                            |> andThen (\methods -> succeed { obj = obj, self = self, methods = methods })
+                                        (methods
+                                            |> andThen (\ms -> succeed { obj = obj, self = self, methods = ms })
                                         )
                                 )
                     )
@@ -307,7 +339,7 @@ call : Parser Syntax.Node
 call =
     succeed Call
         |. symbol "\\call"
-        |= braces codeExpr
+        |= braces nodes
         |= txtArg
 
 
@@ -317,8 +349,8 @@ inline =
         |. symbol "#{"
         |= lazy
             (\_ ->
-                list node
-                    |> andThen (\nodes -> succeed (Math Inline nodes))
+                nodes
+                    |> andThen (\ns -> succeed (Math Inline ns))
             )
         |. symbol "}"
 
@@ -329,8 +361,8 @@ display =
         |. symbol "##{"
         |= lazy
             (\_ ->
-                list node
-                    |> andThen (\nodes -> succeed (Math Display nodes))
+                nodes
+                    |> andThen (\ns -> succeed (Math Display ns))
             )
         |. symbol "}"
 
@@ -342,9 +374,9 @@ verbatim =
         |= text
 
 
+arg : Parser (List Node)
 arg =
-    oneOf
-        []
+    braces textualNodes
 
 
 node : Parser Syntax.Node
@@ -372,14 +404,14 @@ node =
         , inline
         , display
         , succeed identity
-            |= braces textualExpr
-            |> andThen (\nodes -> succeed (Group Braces nodes))
+            |= braces textualNodes
+            |> andThen (\ns -> succeed (Group Braces ns))
         , succeed identity
-            |= squares textualExpr
-            |> andThen (\nodes -> succeed (Group Squares nodes))
+            |= squares textualNodes
+            |> andThen (\ns -> succeed (Group Squares ns))
         , succeed identity
-            |= parens textualExpr
-            |> andThen (\nodes -> succeed (Group Parens nodes))
+            |= parens textualNodes
+            |> andThen (\ns -> succeed (Group Parens ns))
         , verbatim
         ]
 
@@ -398,15 +430,24 @@ funSpec =
             )
 
 
-codeExpr : Parser (List Node)
-codeExpr =
-    lazy (\_ -> list node)
+nodes : Parser (List Node)
+nodes =
+    loop [] nodeHelp
+
+
+nodeHelp : List Node -> Parser (Step (List Node) (List Node))
+nodeHelp revNodes =
+    oneOf
+        [ succeed (\m -> Loop (m :: revNodes))
+            |= node
+        , succeed () |> map (\_ -> Done (List.reverse revNodes))
+        ]
 
 
 binder : Parser (Binding (List String))
 binder =
     succeed identity
-        |= text
+        |= squares text
         |> andThen
             (\str ->
                 case String.uncons str of
@@ -428,8 +469,7 @@ binderHelp revBinders =
     oneOf
         [ succeed (\b -> Loop (b :: revBinders))
             |= binder
-        , succeed
-            ()
+        , succeed ()
             |> map (\_ -> Done (List.reverse revBinders))
         ]
 
@@ -441,6 +481,7 @@ identWithMethodCalls =
         |= (getChompedString
                 (succeed ()
                     |. chompWhile Char.isAlpha
+                    |. chompWhile (\c -> Char.isAlpha c || Char.isDigit c || c == '-' || c == '/' || c == '#')
                 )
                 |> andThen
                     (\str ->
@@ -464,16 +505,40 @@ identWithMethodCalls =
            )
 
 
-textualExpr : Parser (List Node)
-textualExpr =
-    list textualNode
-
-
 textualNode : Parser Node
 textualNode =
     oneOf
-        [ succeed Text |= text
-        , lazy (\_ -> node)
+        [ node
+        , text
+            |> andThen
+                (\str ->
+                    case str of
+                        "" ->
+                            problem "empty string"
+
+                        x ->
+                            succeed (Text x)
+                )
+        ]
+
+
+textualNodes : Parser (List Node)
+textualNodes =
+    loop [] textualNodeHelper
+
+
+textualNodeHelper : List Node -> Parser (Step (List Node) (List Node))
+textualNodeHelper revNodes =
+    oneOf
+        [ succeed
+            (\m -> Loop (m :: revNodes))
+            |= textualNode
+            -- I probably shouldn't chomp here. This is just to work around the
+            -- infinite loop issue that is described here:
+            -- https://package.elm-lang.org/packages/elm/parser/latest/Parser#loop
+            |. wschar
+        , succeed ()
+            |> map (\_ -> Done (List.reverse revNodes))
         ]
 
 

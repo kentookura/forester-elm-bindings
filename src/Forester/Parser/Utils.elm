@@ -1,6 +1,7 @@
 module Forester.Parser.Utils exposing
     ( braces
     , delimited
+    , isWhitespace
     , option
     , parens
     , squares
@@ -17,9 +18,12 @@ import Parser
         , (|=)
         , Parser
         , Step(..)
+        , andThen
         , chompWhile
         , getChompedString
+        , getOffset
         , oneOf
+        , problem
         , succeed
         , symbol
         )
@@ -56,6 +60,10 @@ delimited d p =
         |. symbol (first pair)
         |= p
         |. symbol (second pair)
+
+
+
+-- It seems that the following functions are problematic.
 
 
 isText : Char -> Bool

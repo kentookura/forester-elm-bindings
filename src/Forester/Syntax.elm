@@ -1,10 +1,14 @@
-module Forester.Syntax exposing (Node(..), Tree)
+module Forester.Syntax exposing (Method, Node(..), Tree)
 
 import Forester.Base exposing (Binding, Delim, MathMode, Visibility)
 
 
+type alias Method =
+    ( String, List Node )
+
+
 type alias Object_ =
-    { self : Maybe (List String), methods : List ( String, List Node ) }
+    { self : Maybe (List String), methods : List Method }
 
 
 type alias Patch_ =
