@@ -1,11 +1,62 @@
-module Forester.Parser exposing (file)
+module Forester.Parser exposing
+    ( alloc
+    , arg
+    , binder
+    , binderHelp
+    , binders
+    , bvar
+    , call
+    , codeExpr
+    , declXmlns
+    , def
+    , default
+    , display
+    , export
+    , file
+    , fun
+    , funSpec
+    , get
+    , ident
+    , identWithMethodCalls
+    , import_
+    , inline
+    , let_
+    , list
+    , methodDecl
+    , namespace
+    , node
+    , object
+    , open
+    , patch
+    , put
+    , scope
+    , subtree
+    , textualExpr
+    , textualNode
+    , verbatim
+    , xmlAttr
+    , xmlBaseIdent
+    , xmlQname
+    , xmlTag
+    )
 
 -- Since I expect to use this in an editing frontend, I don't really need this
 -- to be so efficient that it can parse hundreds of trees.
 
-import Forester.Base exposing (Binding, BindingStrategy(..), Delim(..), MathMode(..), Visibility(..), delimToString)
+import Forester.Base exposing (Binding, BindingStrategy(..), Delim(..), MathMode(..), Visibility(..))
+import Forester.Parser.Utils
+    exposing
+        ( braces
+        , delimited
+        , option
+        , parens
+        , squares
+        , text
+        , txtArg
+        , wstext
+        )
 import Forester.Syntax as Syntax exposing (Node(..))
-import Forester.XmlTree exposing (XmlAttr)
+import Forester.XmlTree exposing (Modifier(..))
 import Parser
     exposing
         ( (|.)
@@ -14,36 +65,14 @@ import Parser
         , Step(..)
         , andThen
         , chompWhile
-        , float
         , getChompedString
         , lazy
         , loop
         , map
         , oneOf
-        , run
-        , spaces
         , succeed
         , symbol
         )
-import Tuple exposing (first, second)
-
-
-delimited : Delim -> Parser a -> Parser a
-delimited d p =
-    let
-        pair =
-            delimToString d
-    in
-    -- This is wrong
-    succeed identity
-        |. symbol (first pair)
-        |= p
-        |. symbol (second pair)
-
-
-option : Parser a -> Parser (Maybe a)
-option p =
-    oneOf [ succeed Just |= p, succeed Nothing ]
 
 
 list : Parser a -> Parser (List a)
@@ -54,33 +83,11 @@ list p =
             oneOf
                 [ succeed (\n -> Loop (n :: rev))
                     |= p
-                , succeed () |> map (\_ -> Done (List.reverse rev))
+                , succeed ()
+                    |> map (\_ -> Done (List.reverse rev))
                 ]
     in
     loop [] aux
-
-
-text : Parser String
-text =
-    getChompedString <|
-        succeed ()
-            |. chompWhile
-                (\c ->
-                    List.any (\b -> c == b)
-                        [ ' '
-                        , '%'
-                        , '#'
-                        , '\\'
-                        , '{'
-                        , '}'
-                        , '['
-                        , ']'
-                        , '('
-                        , ')'
-                        , '\u{000D}'
-                        , '\n'
-                        ]
-                )
 
 
 def : Parser Syntax.Node
@@ -94,7 +101,9 @@ def =
 
 alloc : Parser Syntax.Node
 alloc =
-    succeed Alloc |= ident
+    succeed Alloc
+        |. symbol "\\alloc"
+        |= ident
 
 
 import_ : Parser Syntax.Node
@@ -114,6 +123,7 @@ export =
 namespace : Parser Syntax.Node
 namespace =
     succeed Namespace
+        |. symbol "\\namespace"
         |= ident
         |= braces codeExpr
 
@@ -121,8 +131,9 @@ namespace =
 subtree : Parser Syntax.Node
 subtree =
     succeed Subtree
+        |. symbol "\\subtree"
         |= option (delimited Squares wstext)
-        |= braces (Debug.todo "foo")
+        |= arg
 
 
 fun : Parser Syntax.Node
@@ -155,12 +166,14 @@ ident =
 scope : Parser Syntax.Node
 scope =
     succeed Scope
+        |. symbol "\\scope"
         |= arg
 
 
 put : Parser Syntax.Node
 put =
     succeed Put
+        |. symbol "\\put"
         |= ident
         |= arg
 
@@ -168,6 +181,7 @@ put =
 default : Parser Syntax.Node
 default =
     succeed Default
+        |. symbol "\\put?"
         |= ident
         |= arg
 
@@ -175,6 +189,7 @@ default =
 get : Parser Syntax.Node
 get =
     succeed Get
+        |. symbol "\\get"
         |= ident
 
 
@@ -187,13 +202,24 @@ open =
 
 xmlAttr : Parser ( ( Maybe String, String ), List Node )
 xmlAttr =
-    Debug.todo "implement xmlattr"
+    let
+        splitXmlQname str =
+            case String.split ":" str of
+                [ prefix, uname ] ->
+                    ( Just prefix, uname )
 
+                [ uname ] ->
+                    ( Nothing, uname )
 
-
--- succeed XmlAttr
---     |= squares text
---     |= arg
+                _ ->
+                    Debug.todo "Failed to split xml qname"
+    in
+    squares text
+        |> andThen
+            (\k ->
+                arg
+                    |> andThen (\v -> succeed ( splitXmlQname k, v ))
+            )
 
 
 xmlBaseIdent : Parser String
@@ -224,22 +250,65 @@ xmlTag =
 
 declXmlns : Parser Syntax.Node
 declXmlns =
-    Debug.todo "declXmlns"
+    succeed DeclXmlns
+        |. symbol "\\xmlns:"
+        |= xmlBaseIdent
+        |= txtArg
 
 
 object : Parser Syntax.Node
 object =
-    Debug.todo "implement object"
+    succeed identity
+        |. symbol "\\object"
+        |= option (squares bvar)
+        |> andThen
+            (\slf ->
+                braces (list methodDecl)
+                    |> andThen
+                        (\methods -> succeed (Object { self = slf, methods = methods }))
+            )
+
+
+methodDecl : Parser ( String, List Node )
+methodDecl =
+    squares text
+        |> andThen
+            (\k ->
+                arg
+                    |> andThen (\v -> succeed ( k, v ))
+            )
+
+
+bvar : Parser (List String)
+bvar =
+    text |> andThen (\x -> succeed [ x ])
 
 
 patch : Parser Syntax.Node
 patch =
-    Debug.todo "implement patch"
+    succeed Patch
+        |. symbol "\\patch"
+        |= (braces codeExpr
+                |> andThen
+                    (\obj ->
+                        option (squares bvar)
+                            |> andThen
+                                (\self ->
+                                    braces
+                                        (list methodDecl
+                                            |> andThen (\methods -> succeed { obj = obj, self = self, methods = methods })
+                                        )
+                                )
+                    )
+           )
 
 
 call : Parser Syntax.Node
 call =
-    Debug.todo "implement call"
+    succeed Call
+        |. symbol "\\call"
+        |= braces codeExpr
+        |= txtArg
 
 
 inline : Parser Syntax.Node
@@ -266,24 +335,11 @@ display =
         |. symbol "}"
 
 
-braces : Parser a -> Parser a
-braces p =
-    delimited Braces p
-
-
-squares : Parser a -> Parser a
-squares p =
-    delimited Squares p
-
-
-parens : Parser a -> Parser a
-parens p =
-    delimited Parens p
-
-
 verbatim : Parser Syntax.Node
 verbatim =
-    Debug.todo "implement verbatim"
+    succeed Verbatim
+        |. symbol "\\verb"
+        |= text
 
 
 arg =
@@ -315,9 +371,15 @@ node =
         , call
         , inline
         , display
-        , braces textualExpr
-        , squares textualExpr
-        , parens textualExpr
+        , succeed identity
+            |= braces textualExpr
+            |> andThen (\nodes -> succeed (Group Braces nodes))
+        , succeed identity
+            |= squares textualExpr
+            |> andThen (\nodes -> succeed (Group Squares nodes))
+        , succeed identity
+            |= parens textualExpr
+            |> andThen (\nodes -> succeed (Group Parens nodes))
         , verbatim
         ]
 
@@ -336,21 +398,9 @@ funSpec =
             )
 
 
-txtArg : Parser String
-txtArg =
-    braces wstext
-
-
-wstext : Parser String
-wstext =
-    getChompedString <|
-        succeed ()
-            |. chompWhile (\c -> c /= ' ')
-
-
-codeExpr : Parser a
+codeExpr : Parser (List Node)
 codeExpr =
-    Debug.todo "implement codeExpr"
+    lazy (\_ -> list node)
 
 
 binder : Parser (Binding (List String))
@@ -414,9 +464,17 @@ identWithMethodCalls =
            )
 
 
-textualExpr : Parser a
+textualExpr : Parser (List Node)
 textualExpr =
-    Debug.todo "textual expr"
+    list textualNode
+
+
+textualNode : Parser Node
+textualNode =
+    oneOf
+        [ succeed Text |= text
+        , lazy (\_ -> node)
+        ]
 
 
 file : Parser (List Node)
