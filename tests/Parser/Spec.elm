@@ -1,4 +1,4 @@
-module ParserSpec exposing (suite)
+module Parser.Spec exposing (suite)
 
 import Expect
 import Forester.Base exposing (BindingStrategy(..), Visibility(..))

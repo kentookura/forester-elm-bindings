@@ -1,4 +1,4 @@
-module ParserUtilSpec exposing (suite)
+module Parser.UtilSpec exposing (suite)
 
 import Expect
 import Forester.Parser.Utils exposing (..)
