@@ -9,6 +9,7 @@ module Forester.Base exposing
     , addr
     , delimToString
     , mathMode
+    , ppAddr
     , xmlQname
     )
 
@@ -66,6 +67,22 @@ type Addr
     | MachineAddr Int
     | HashAddr String
     | Anon
+
+
+ppAddr : Addr -> String
+ppAddr a =
+    case a of
+        UserAddr str ->
+            str
+
+        MachineAddr i ->
+            "#" ++ String.fromInt i
+
+        HashAddr h ->
+            "<hash:" ++ h ++ ">"
+
+        Anon ->
+            "<anon>"
 
 
 addr : Decoder Addr
