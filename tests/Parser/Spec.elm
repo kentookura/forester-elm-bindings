@@ -17,6 +17,8 @@ import Forester.Parser
         , let_
         , textualNode
         , textualNodes
+        , xmlQname
+        , xmlTag
         )
 import Forester.Syntax exposing (Node(..))
 import Parser exposing (run)
@@ -109,6 +111,23 @@ suite =
                     Expect.equal
                         (run identWithMethodCalls "\\foo/bar/baz#asdf")
                         (Ok (Ident [ "foo", "bar", "baz" ] [ "asdf" ]))
+            ]
+        , Test.describe "xml support"
+            [ Test.test "qname" <|
+                \_ ->
+                    Expect.equal
+                        (run xmlQname "foo:bar")
+                        (Ok ( Just "foo", "bar" ))
+            , Test.test "tag" <|
+                \_ ->
+                    Expect.equal
+                        (run xmlTag "\\<foo:bar>{}")
+                        (Ok (XmlTag ( Just "foo", "bar" ) [] []))
+            , Test.test "with attrs" <|
+                \_ ->
+                    Expect.equal
+                        (run xmlTag "\\<foo:bar>[a]{b}[c]{d}{}")
+                        (Ok (XmlTag ( Just "foo", "bar" ) [ ( ( Nothing, "a" ), [ Text "b" ] ), ( ( Nothing, "c" ), [ Text "d" ] ) ] []))
             ]
         , Test.describe "nodes"
             [ Test.test "import" <|

@@ -243,17 +243,20 @@ xmlAttrs =
 
 xmlBaseIdent : Parser String
 xmlBaseIdent =
-    getChompedString <| succeed () |. chompWhile (\c -> Char.isAlpha c || Char.isDigit c || c == '-' || c == '_')
+    getChompedString <|
+        succeed ()
+            |. chompWhile
+                (\c -> Char.isAlpha c || Char.isDigit c || c == '-' || c == '_')
 
 
 xmlQname : Parser ( Maybe String, String )
 xmlQname =
     oneOf
-        [ succeed (\str -> ( Nothing, str ))
-            |= xmlBaseIdent
-        , succeed (\a b -> ( Just a, b ))
+        [ succeed (\a b -> ( Just a, b ))
             |= xmlBaseIdent
             |. symbol ":"
+            |= xmlBaseIdent
+        , succeed (\str -> ( Nothing, str ))
             |= xmlBaseIdent
         ]
 
@@ -263,6 +266,7 @@ xmlTag =
     succeed XmlTag
         |. symbol "\\<"
         |= xmlQname
+        |. symbol ">"
         |= xmlAttrs
         |= arg
 
@@ -550,6 +554,7 @@ file =
             oneOf
                 [ succeed (\n -> Loop (n :: revNodes))
                     |= node
+                    |. wschar
                 , succeed () |> map (\_ -> Done (List.reverse revNodes))
                 ]
     in

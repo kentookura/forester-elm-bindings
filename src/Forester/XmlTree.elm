@@ -27,6 +27,7 @@ module Forester.XmlTree exposing
     , contentTarget
     , createPairs
     , defaultSectionFlags
+    , emptyFrontmatter
     , emptyFrontmatterOverrides
     , folder
     , frontmatter
