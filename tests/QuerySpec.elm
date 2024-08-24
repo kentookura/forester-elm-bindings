@@ -10,9 +10,12 @@ import Forester.Query
         , Mode(..)
         , Polarity(..)
         , dbix
+        , encodeAddr
+        , encodeExpr
         , expr
         )
 import Json.Decode exposing (decodeString)
+import Json.Encode exposing (encode)
 import Test exposing (Test)
 
 
@@ -158,5 +161,16 @@ suite =
                 \_ -> Expect.equal (decodeString (expr addr) r_str) (Ok r)
             , Test.test "user addrs" <|
                 \_ -> Expect.equal (decodeString (expr addr) e_str) (Ok e)
+            , Test.test "expr roundtrips" <|
+                \_ ->
+                    Expect.equal
+                        (encodeExpr encodeAddr e
+                            |> (\v ->
+                                    decodeString
+                                        (expr addr)
+                                        (encode 0 v)
+                               )
+                        )
+                        (Ok e)
             ]
         ]

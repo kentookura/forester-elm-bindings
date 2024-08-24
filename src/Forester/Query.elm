@@ -5,10 +5,13 @@ module Forester.Query exposing
     , Mode(..)
     , Polarity(..)
     , dbix
+    , encodeAddr
+    , encodeExpr
     , expr
     )
 
-import Forester.Base exposing (Addr, addr)
+import Forester.Base exposing (Addr(..), addr)
+import Html exposing (wbr)
 import Json.Decode
     exposing
         ( Decoder
@@ -23,6 +26,7 @@ import Json.Decode
         , string
         , succeed
         )
+import Json.Encode as Encode exposing (Value)
 
 
 type alias Rel =
@@ -178,3 +182,123 @@ expr var =
         , field "Union_fam" (lazy (\_ -> fam UnionFam var))
         , field "Isect_fam" (lazy (\_ -> fam IsectFam var))
         ]
+
+
+encodeAddr : Addr -> Value
+encodeAddr a =
+    case a of
+        UserAddr str ->
+            Encode.object [ ( "User_addr", Encode.string str ) ]
+
+        MachineAddr i ->
+            Encode.object [ ( "Machine_addr", Encode.int i ) ]
+
+        HashAddr hash ->
+            Encode.object [ ( "Hash_addr", Encode.string hash ) ]
+
+        Anon ->
+            Encode.string "Anon"
+
+
+encodeAddrExpr : (v -> Value) -> AddrExpr v -> Value
+encodeAddrExpr encodeVar e =
+    case e of
+        Addr addr ->
+            Encode.object [ ( "Addr", encodeAddr addr ) ]
+
+        Var v ->
+            Encode.object [ ( "Var", encodeVar v ) ]
+
+
+encodeRelpart : (var -> Value) -> Relpart var -> Value
+encodeRelpart varEncoder rp =
+    case rp of
+        M m ->
+            case m of
+                Edges ->
+                    Encode.string "Edges"
+
+                Paths ->
+                    Encode.string "Paths"
+
+        P p ->
+            case p of
+                Incoming ->
+                    Encode.string "Incoming"
+
+                Outgoing ->
+                    Encode.string "Outgoing"
+
+        R r ->
+            Encode.string r
+
+        AE a ->
+            encodeAddrExpr varEncoder a
+
+
+encodeFamPart : (var -> Value) -> FamPart var -> Value
+encodeFamPart varEncoder fp =
+    case fp of
+        E e ->
+            encodeExpr varEncoder e
+
+        B b ->
+            encodeBinder varEncoder b
+
+
+encodeBinder : (var -> Value) -> Binder (Expr var) -> Value
+encodeBinder varEncoder { body } =
+    Encode.object [ ( "body", encodeExpr varEncoder body ) ]
+
+
+encodeExpr : (v -> Value) -> Expr v -> Value
+encodeExpr valEncoder e =
+    case e of
+        Rel m p r ae ->
+            Encode.object
+                [ ( "Rel"
+                  , Encode.list (\rp -> encodeRelpart valEncoder rp)
+                        [ M m
+                        , P p
+                        , R r
+                        , AE ae
+                        ]
+                  )
+                ]
+
+        Isect exprs ->
+            Encode.object
+                [ ( "Isect"
+                  , Encode.list (encodeExpr valEncoder) exprs
+                  )
+                ]
+
+        Union exprs ->
+            Encode.object
+                [ ( "Union"
+                  , Encode.list (encodeExpr valEncoder) exprs
+                  )
+                ]
+
+        Complement xpr ->
+            Encode.object
+                [ ( "Complement"
+                  , encodeExpr valEncoder xpr
+                  )
+                ]
+
+        UnionFam xpr b ->
+            Encode.object
+                [ ( "Union_fam"
+                  , Encode.list (\fp -> encodeFamPart valEncoder fp)
+                        []
+                  )
+                ]
+
+        IsectFam xpr b ->
+            Encode.object
+                [ ( "Isect_fam"
+                  , Encode.list (\fp -> encodeFamPart valEncoder fp)
+                        []
+                  )
+                ]
