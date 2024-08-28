@@ -304,7 +304,6 @@ type ContentTarget content
     | Mainmatter
     | Title
     | Taxon
-    | Number
 
 
 contentTarget : Decoder content -> Decoder (ContentTarget content)
@@ -331,9 +330,6 @@ contentTarget c =
 
                         "Taxon" ->
                             succeed Taxon
-
-                        "Number" ->
-                            succeed Number
 
                         _ ->
                             fail "Failed to decode content_target"
@@ -527,6 +523,7 @@ type ContentNode
     | CDATA String
     | XmlElt (XmlElt_ Content)
     | Transclude (Transclusion Content)
+    | ContextualNumber Addr
     | ResultsOfQuery (Query.Expr Query.Dbix)
     | Section (Section_ Content)
     | Prim ( Prim, Content )
@@ -554,6 +551,7 @@ contentNode =
         , field "CDATA" string |> map CDATA
         , field "Xml_elt" xmlElt |> map XmlElt
         , field "Transclude" (transclusion content) |> map Transclude
+        , field "Contextual_number" addr |> map ContextualNumber
         , field "Results_of_query" (Query.expr int) |> map ResultsOfQuery
         , field "Section" section |> map Section
         , field "Prim"
