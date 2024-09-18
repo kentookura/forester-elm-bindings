@@ -77,6 +77,7 @@ import Json.Decode as Decode
         , succeed
         )
 import Json.Decode.Pipeline exposing (optional, required)
+import Url
 
 
 type alias SectionFlags =
@@ -372,14 +373,28 @@ transclusion c =
 
 
 type alias Link_ content =
-    { href : String, content : content }
+    { href : Url.Url, content : content }
 
 
 link : Decoder content -> Decoder (Link_ content)
 link c =
     succeed
         Link_
-        |> required "href" string
+        |> required "href"
+            (string
+                |> andThen
+                    (\str ->
+                        Url.fromString str
+                            |> (\m ->
+                                    case m of
+                                        Just url ->
+                                            succeed url
+
+                                        Nothing ->
+                                            fail "Failed to decode url"
+                               )
+                    )
+            )
         |> required "content" c
 
 
