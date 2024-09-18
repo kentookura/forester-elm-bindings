@@ -591,7 +591,7 @@ type Content
 
 content : Decoder Content
 content =
-    list (lazy (\_ -> contentNode)) |> map Content
+    field "Content" (list (lazy (\_ -> contentNode))) |> map Content
 
 
 type alias Resource_ =
